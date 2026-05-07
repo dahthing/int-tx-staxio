@@ -50,7 +50,7 @@ import { QueueService } from '../../services/queue.service';
   styles: [`
     .stats-cards {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      grid-template-columns: repeat(7, 1fr);
       gap: 1rem;
     }
     .stats-card {
@@ -61,7 +61,7 @@ import { QueueService } from '../../services/queue.service';
       display: flex;
       flex-direction: column;
       gap: 0.125rem;
-      &--wide { grid-column: span 2; }
+      &--wide { min-width: 200px; }
       &__icon {
         font-size: 18px; width: 18px; height: 18px;
         margin-bottom: 0.125rem;

@@ -8,10 +8,12 @@ import {
   effect,
 } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { NgTemplateOutlet } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { LayoutService } from '../../services/layout.service';
 import { QueueService } from '../../services/queue.service';
 import { AuthService } from '../../services/auth.service';
 
@@ -27,6 +29,7 @@ interface NavItem {
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
+    NgTemplateOutlet,
     MatIconModule,
     MatButtonModule,
     MatTooltipModule,
@@ -39,6 +42,7 @@ interface NavItem {
 })
 export class Shell implements OnInit {
   readonly #queue = inject(QueueService);
+  readonly #layout = inject(LayoutService);
   readonly #snackBar = inject(MatSnackBar);
   readonly #auth = inject(AuthService);
 
@@ -47,6 +51,7 @@ export class Shell implements OnInit {
   readonly errorCount = this.#queue.errorCount;
   readonly userEmail = computed(() => this.#auth.user()?.email ?? '');
 
+  readonly headerTemplate = this.#layout.headerTemplate;
   readonly hasPending = computed(() => this.pendingCount() > 0);
   readonly hasErrors = computed(() => this.errorCount() > 0);
 

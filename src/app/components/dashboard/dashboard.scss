@@ -7,15 +7,10 @@
   // ============================================================
   // HEADER
   // ============================================================
-  &__header {
+  &__header-inline {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 0 2rem;
-    height: 44px;
-    border-bottom: 1px solid var(--stx-border);
-    background: var(--stx-surface);
-    flex-shrink: 0;
+    gap: 0.75rem;
     flex-wrap: wrap;
   }
 

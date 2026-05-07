@@ -78,6 +78,9 @@
         >
           <mat-icon>menu</mat-icon>
         </button>
+        @if (headerTemplate()) {
+        <ng-container [ngTemplateOutlet]="headerTemplate()!" />
+        }
       </div>
 
       <div class="shell__topbar-right">

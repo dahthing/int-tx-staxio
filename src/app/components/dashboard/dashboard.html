@@ -1,16 +1,13 @@
-<div class="dashboard">
-
-  <!-- ====================================================
-       HEADER
-       ==================================================== -->
-  <header class="dashboard__header">
+<ng-template #dashboardHeader>
+  <div class="dashboard__header-inline">
     <h1 class="dashboard__title">Dashboard</h1>
-<div class="dashboard__stats" role="group" aria-label="Estatísticas">
-  <span class="stat-badge stat-badge--pending">{{ pendingCount() }} pendentes</span>
-  <span class="stat-badge stat-badge--error">{{ errorCount() }} erros</span>
-  <span class="stat-badge stat-badge--done">{{ doneCount() }} concluídos</span>
-  <span class="stat-badge">{{ entries().length }} total</span>
-</div>
+
+    <div class="dashboard__stats" role="group" aria-label="Estatísticas">
+      <span class="stat-badge stat-badge--pending">{{ pendingCount() }} pendentes</span>
+      <span class="stat-badge stat-badge--error">{{ errorCount() }} erros</span>
+      <span class="stat-badge stat-badge--done">{{ doneCount() }} concluídos</span>
+      <span class="stat-badge">{{ entries().length }} total</span>
+    </div>
 
     <div class="dashboard__actions">
       <button class="btn btn--ghost btn--sm" type="button" (click)="onClassify()" [disabled]="actionBusy()"
@@ -25,7 +22,10 @@
         Mover todos ({{ pendingCount() }})
       </button>
     </div>
-  </header>
+  </div>
+  </ng-template>
+  
+  <div class="dashboard">
 
   <!-- ====================================================
        STATISTICS

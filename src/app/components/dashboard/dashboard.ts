@@ -1,12 +1,17 @@
 import {
+  AfterViewInit,
   ChangeDetectionStrategy,
   Component,
+  OnDestroy,
+  TemplateRef,
+  ViewChild,
   inject,
   signal,
 } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { LayoutService } from '../../services/layout.service';
 import { QueueService } from '../../services/queue.service';
 import { InboxList } from '../inbox-list/inbox-list';
 import { LogViewer } from '../log-viewer/log-viewer';
@@ -35,7 +40,9 @@ import { TopSuppliers } from '../stats/top-suppliers';
   styleUrl: './dashboard.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Dashboard {
+export class Dashboard implements AfterViewInit, OnDestroy {
+  @ViewChild('dashboardHeader') private headerTpl!: TemplateRef<unknown>;
+  readonly #layout = inject(LayoutService);
   readonly #queue = inject(QueueService);
   readonly #snackBar = inject(MatSnackBar);
 
@@ -46,6 +53,14 @@ export class Dashboard {
   readonly pendingCount = this.#queue.pendingCount;
   readonly errorCount = this.#queue.errorCount;
   readonly doneCount = this.#queue.doneCount;
+
+  ngAfterViewInit(): void {
+    this.#layout.headerTemplate.set(this.headerTpl);
+  }
+
+  ngOnDestroy(): void {
+    this.#layout.headerTemplate.set(null);
+  }
 
   readonly #actionBusy = signal(false);
   readonly actionBusy = this.#actionBusy.asReadonly();
