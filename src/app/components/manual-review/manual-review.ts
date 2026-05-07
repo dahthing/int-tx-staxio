@@ -180,4 +180,21 @@ export class ManualReview implements OnInit {
       verticalPosition: 'bottom',
     });
   }
+
+  async onDelete(entry: QueueEntry): Promise<void> {
+    if (!confirm(`Apagar "${entry.file_name}" da fila? O ficheiro continua no Drive e pode ser reimportado.`)) return;
+    this.#actionBusy.set(true);
+    const { error } = await this.#supabase
+      .from('processing_queue')
+      .delete()
+      .eq('id', entry.id);
+    if (error) {
+      this.#toast(error.message, 'error');
+    } else {
+      this.#expandedId.set(null);
+      void this.#queue.loadAll();
+      this.#toast('Registo apagado — o ficheiro pode ser reimportado', 'info');
+    }
+    this.#actionBusy.set(false);
+  }
 }

@@ -133,6 +133,17 @@
                 <div class="review__form-actions">
                   <button
                     type="button"
+                    class="btn btn--danger btn--sm review__delete-btn"
+                    (click)="onDelete(entry)"
+                    [disabled]="actionBusy()"
+                    aria-label="Apagar registo da fila"
+                    title="Apaga este registo para voltar a importar"
+                  >
+                    <mat-icon>delete_outline</mat-icon>
+                    Apagar registo
+                  </button>
+                  <button
+                    type="button"
                     class="btn btn--ghost btn--sm"
                     (click)="onIgnore(entry)"
                     [disabled]="actionBusy()"

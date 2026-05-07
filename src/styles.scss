@@ -71,6 +71,12 @@ html, body {
     color: var(--stx-text-muted);
     &:hover:not(:disabled) { background: var(--stx-surface-2); color: var(--stx-text); }
   }
+  &--danger {
+    background: transparent;
+    border-color: var(--stx-error);
+    color: var(--stx-error);
+    &:hover:not(:disabled) { background: color-mix(in srgb, var(--stx-error) 10%, transparent); }
+  }
   &--sm { padding: 0.25rem 0.625rem; font-size: 0.8125rem; }
 }
 
