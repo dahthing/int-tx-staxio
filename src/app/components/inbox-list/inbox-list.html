@@ -1,0 +1,75 @@
+<section class="inbox-list" aria-label="Fila de processamento">
+  @if (entries().length === 0) {
+    <p class="inbox-list__empty" role="status">Inbox vazia.</p>
+  } @else {
+    <table class="inbox-list__table" role="table">
+      <thead>
+        <tr>
+          <th scope="col">Ficheiro</th>
+          <th scope="col">Fornecedor</th>
+          <th scope="col">Data</th>
+          <th scope="col">Valor</th>
+          <th scope="col">Estado</th>
+          <th scope="col">Destino</th>
+          <th scope="col"><span class="sr-only">Ações</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (entry of entries(); track entry.id) {
+          <tr
+            [class]="'inbox-list__row inbox-list__row--' + entry.status"
+            (click)="edit.emit(entry)"
+            style="cursor:pointer"
+            [attr.aria-label]="'Editar ' + entry.file_name"
+            tabindex="0"
+            (keydown.enter)="edit.emit(entry)"
+            (keydown.space)="edit.emit(entry)"
+          >
+            <td class="inbox-list__cell inbox-list__cell--name" [title]="entry.file_name">
+              {{ entry.file_name }}
+            </td>
+            <td class="inbox-list__cell">{{ entry.supplier ?? '—' }}</td>
+            <td class="inbox-list__cell">{{ entry.doc_date ? (entry.doc_date | date:'dd/MM/yyyy') : '—' }}</td>
+            <td class="inbox-list__cell inbox-list__cell--value">
+              @if (entry.value !== null) {
+                {{ entry.value | number:'1.2-2' }} {{ entry.currency }}
+              } @else {
+                —
+              }
+            </td>
+            <td class="inbox-list__cell">
+              <span class="badge badge--{{ entry.status }}" [attr.aria-label]="'Estado: ' + statusLabel[entry.status]">
+                {{ statusLabel[entry.status] }}
+              </span>
+            </td>
+            <td class="inbox-list__cell inbox-list__cell--path" [title]="entry.dest_path ?? ''">
+              {{ entry.dest_path ?? '—' }}
+            </td>
+            <td class="inbox-list__cell inbox-list__cell--actions">
+              @if (entry.status === 'pending' || entry.status === 'error') {
+                <button
+                  class="btn btn--sm btn--primary"
+                  type="button"
+                  (click)="move.emit(entry.id)"
+                  [attr.aria-label]="'Mover ' + entry.file_name"
+                >
+                  Mover
+                </button>
+              }
+              @if (entry.status === 'error' || entry.status === 'manual_review') {
+                <button
+                  class="btn btn--sm btn--ghost"
+                  type="button"
+                  (click)="statusChange.emit({ id: entry.id, status: 'pending' })"
+                  [attr.aria-label]="'Retentar ' + entry.file_name"
+                >
+                  Retentar
+                </button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>

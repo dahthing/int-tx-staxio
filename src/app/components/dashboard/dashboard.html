@@ -1,0 +1,150 @@
+<div class="dashboard">
+
+  <!-- ====================================================
+       HEADER
+       ==================================================== -->
+  <header class="dashboard__header">
+    <div class="dashboard__header-top">
+      <div>
+        <h1 class="dashboard__title">Dashboard</h1>
+        <p class="dashboard__subtitle">Documentos fiscais em processamento</p>
+      </div>
+
+      <div class="dashboard__actions">
+        <button
+          class="btn btn--ghost btn--sm"
+          type="button"
+          (click)="onClassify()"
+          [disabled]="actionBusy()"
+          aria-label="Classificar novos documentos da inbox"
+        >
+          <mat-icon>cloud_download</mat-icon>
+          @if (actionBusy()) { A processar… } @else { Classificar inbox }
+        </button>
+
+        <button
+          class="btn btn--primary btn--sm"
+          type="button"
+          (click)="onMoveAll()"
+          [disabled]="actionBusy() || pendingCount() === 0"
+          aria-label="Mover todos os documentos pendentes"
+        >
+          <mat-icon>drive_file_move</mat-icon>
+          Mover todos ({{ pendingCount() }})
+        </button>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="dashboard__stats" role="group" aria-label="Estatísticas">
+      <div class="stat">
+        <span class="stat__value stat__value--pending">{{ pendingCount() }}</span>
+        <span class="stat__label">Pendentes</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value stat__value--error">{{ errorCount() }}</span>
+        <span class="stat__label">Com erro</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value stat__value--done">{{ doneCount() }}</span>
+        <span class="stat__label">Concluídos</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value">{{ entries().length }}</span>
+        <span class="stat__label">Total</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ====================================================
+       STATISTICS
+       ==================================================== -->
+  <section class="dashboard__statistics" aria-label="Estatísticas">
+    <app-stats-cards />
+    @defer (on idle) {
+      <div class="dashboard__charts">
+        <app-month-chart />
+        <app-top-suppliers />
+      </div>
+    } @placeholder {
+      <div class="dashboard__skeleton">
+        <div class="skeleton skeleton--row skeleton--full" style="height:240px"></div>
+      </div>
+    }
+  </section>
+
+  <!-- ====================================================
+       BODY
+       ==================================================== -->
+  <div class="dashboard__body">
+
+    <!-- QUEUE -->
+    <section class="dashboard__queue" aria-label="Fila de processamento">
+      @if (loading()) {
+        <!-- SKELETON -->
+        <div class="dashboard__skeleton" aria-label="A carregar" aria-busy="true">
+          @for (_ of [1,2,3,4,5]; track $index) {
+            <div class="skeleton-row">
+              <div class="skeleton skeleton--text skeleton--w60"></div>
+              <div class="skeleton skeleton--text skeleton--w40"></div>
+              <div class="skeleton skeleton--text skeleton--w40"></div>
+            </div>
+          }
+        </div>
+      } @else if (error()) {
+        <!-- ERROR STATE -->
+        <div class="empty-state empty-state--error" role="alert">
+          <mat-icon class="empty-state__icon">cloud_off</mat-icon>
+          <p class="empty-state__title">Erro de ligação</p>
+          <p class="empty-state__desc">{{ error() }}</p>
+        </div>
+      } @else if (entries().length === 0) {
+        <!-- EMPTY STATE -->
+        <div class="empty-state" role="status">
+          <mat-icon class="empty-state__icon">inbox</mat-icon>
+          <p class="empty-state__title">Inbox vazia</p>
+          <p class="empty-state__desc">Coloca PDFs na pasta Drive inbox e clica em "Classificar inbox".</p>
+          <button class="btn btn--primary btn--sm" type="button" (click)="onClassify()" [disabled]="actionBusy()">
+            <mat-icon>cloud_download</mat-icon>
+            Classificar inbox
+          </button>
+        </div>
+      } @else {
+        <app-inbox-list
+          [entries]="entries()"
+          (move)="onMoveOne($event)"
+          (statusChange)="onStatusChange($event)"
+          (edit)="onEdit($event)"
+        />
+      }
+    </section>
+
+    <!-- SIDE PANEL: logs ou form -->
+    <aside class="dashboard__side" aria-label="Painel lateral">
+      @if (editingEntry()) {
+        <app-metadata-form
+          [entry]="editingEntry()!"
+          (saved)="onEditSaved()"
+          (cancelled)="onEditCancelled()"
+        />
+      } @else {
+        @defer (on idle) {
+          @if (logs().length === 0 && !loading()) {
+            <div class="empty-state empty-state--sm" role="status">
+              <mat-icon class="empty-state__icon">receipt_long</mat-icon>
+              <p class="empty-state__title">Sem registos</p>
+            </div>
+          } @else {
+            <app-log-viewer [logs]="logs()" />
+          }
+        } @placeholder {
+          <div class="dashboard__skeleton">
+            @for (_ of [1,2,3]; track $index) {
+              <div class="skeleton skeleton--row skeleton--full"></div>
+            }
+          </div>
+        }
+      }
+    </aside>
+  </div>
+</div>

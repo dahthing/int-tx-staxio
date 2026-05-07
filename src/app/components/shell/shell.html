@@ -1,0 +1,110 @@
+<div class="shell">
+  <!-- ====================================================
+       SIDEBAR
+       ==================================================== -->
+  <nav class="shell__sidebar" [class.shell__sidebar--collapsed]="collapsed()" aria-label="Navegação principal">
+    <div class="shell__sidebar-header">
+      @if (!collapsed()) {
+        <span class="shell__brand" aria-label="Staxio">
+          <span class="shell__brand-icon">S</span>
+          <span class="shell__brand-name">Staxio</span>
+        </span>
+      } @else {
+        <span class="shell__brand-icon shell__brand-icon--centered" aria-label="Staxio">S</span>
+      }
+    </div>
+
+    <ul class="shell__nav-list" role="list">
+      @for (item of navItems; track item.route) {
+        <li>
+          <a
+            class="shell__nav-item"
+            [routerLink]="item.route"
+            routerLinkActive="shell__nav-item--active"
+            [routerLinkActiveOptions]="{ exact: item.route === '/' }"
+            [matTooltip]="collapsed() ? item.label : ''"
+            matTooltipPosition="right"
+            [attr.aria-label]="item.label"
+          >
+            <mat-icon class="shell__nav-icon">{{ item.icon }}</mat-icon>
+            @if (!collapsed()) {
+              <span class="shell__nav-label">{{ item.label }}</span>
+            }
+            @if (item.route === '/' && hasPending()) {
+              <span
+                class="shell__nav-badge"
+                [class.shell__nav-badge--pulse]="hasPending()"
+                [attr.aria-label]="pendingCount() + ' documentos pendentes'"
+              >{{ pendingCount() }}</span>
+            }
+            @if (item.route === '/review' && hasErrors()) {
+              <span
+                class="shell__nav-badge shell__nav-badge--error"
+                [attr.aria-label]="errorCount() + ' documentos com erro'"
+              >{{ errorCount() }}</span>
+            }
+          </a>
+        </li>
+      }
+    </ul>
+
+    <div class="shell__sidebar-footer">
+      <button
+        class="shell__collapse-btn"
+        type="button"
+        (click)="toggleSidebar()"
+        [matTooltip]="collapsed() ? 'Expandir' : 'Colapsar'"
+        matTooltipPosition="right"
+        [attr.aria-expanded]="!collapsed()"
+        aria-label="Toggle sidebar"
+      >
+        <mat-icon>{{ collapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ====================================================
+       MAIN AREA
+       ==================================================== -->
+  <div class="shell__main">
+    <!-- TOP BAR -->
+    <header class="shell__topbar" role="banner">
+      <div class="shell__topbar-left">
+        <button
+          class="shell__menu-btn"
+          type="button"
+          (click)="toggleSidebar()"
+          aria-label="Toggle menu"
+        >
+          <mat-icon>menu</mat-icon>
+        </button>
+      </div>
+
+      <div class="shell__topbar-right">
+        @if (hasPending()) {
+          <span class="shell__topbar-badge" role="status" aria-live="polite">
+            <span class="shell__topbar-badge-dot"></span>
+            {{ pendingCount() }} pendente{{ pendingCount() === 1 ? '' : 's' }}
+          </span>
+        }
+        @if (userEmail()) {
+          <span class="shell__topbar-user" aria-label="Utilizador autenticado">{{ userEmail() }}</span>
+        }
+        <button
+          class="btn btn--ghost btn--sm"
+          type="button"
+          (click)="signOut()"
+          aria-label="Terminar sessão"
+          matTooltip="Terminar sessão"
+        >
+          <mat-icon>logout</mat-icon>
+        </button>
+      </div>
+    </header>
+
+    <!-- PAGE CONTENT -->
+    <main class="shell__content" id="main-content">
+      <router-outlet />
+    </main>
+  </div>
+</div>

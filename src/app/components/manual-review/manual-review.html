@@ -1,0 +1,148 @@
+<div class="review">
+  <header class="review__header">
+    <h1 class="review__title">Revisão manual</h1>
+    <p class="review__subtitle">
+      @if (items().length === 0) { Sem itens para rever }
+      @else { {{ items().length }} item{{ items().length === 1 ? '' : 's' }} a rever }
+    </p>
+  </header>
+
+  <div class="review__body">
+    @if (items().length === 0) {
+      <div class="empty-state" role="status">
+        <mat-icon class="empty-state__icon">check_circle</mat-icon>
+        <p class="empty-state__title">Tudo em ordem</p>
+        <p class="empty-state__desc">Não há documentos com erro ou a aguardar revisão.</p>
+      </div>
+    } @else {
+      <ul class="review__list" role="list">
+        @for (entry of items(); track entry.id) {
+          <li class="review__item" [class.review__item--expanded]="expandedId() === entry.id">
+
+            <!-- SUMMARY ROW -->
+            <button
+              class="review__row"
+              type="button"
+              (click)="toggleExpand(entry)"
+              [attr.aria-expanded]="expandedId() === entry.id"
+              [attr.aria-label]="'Expandir ' + entry.file_name"
+            >
+              <span class="badge badge--{{ entry.status }}">{{ statusLabel[entry.status] }}</span>
+
+              <span class="review__file" [title]="entry.file_name">{{ entry.file_name }}</span>
+
+              <span class="review__meta">
+                @if (entry.supplier) { <span>{{ entry.supplier }}</span> }
+                @if (entry.doc_date) { <span>{{ entry.doc_date | date:'dd/MM/yyyy' }}</span> }
+                @if (entry.value !== null) {
+                  <span>{{ entry.value | number:'1.2-2' }} {{ entry.currency }}</span>
+                }
+              </span>
+
+              @if (entry.error_message) {
+                <span class="review__error-pill" [title]="entry.error_message">
+                  <mat-icon>error_outline</mat-icon>
+                  {{ entry.error_message | slice:0:60 }}{{ entry.error_message.length > 60 ? '…' : '' }}
+                </span>
+              }
+
+              <mat-icon class="review__chevron">
+                {{ expandedId() === entry.id ? 'expand_less' : 'expand_more' }}
+              </mat-icon>
+            </button>
+
+            <!-- EDIT FORM -->
+            @if (expandedId() === entry.id) {
+              <form
+                class="review__form"
+                [formGroup]="form"
+                (ngSubmit)="onApprove(entry)"
+                novalidate
+                aria-label="Editar metadados"
+              >
+                <div class="review__fields">
+                  <div class="field">
+                    <label class="field__label" for="supplier-{{ entry.id }}">Fornecedor</label>
+                    <input id="supplier-{{ entry.id }}" class="field__input" type="text"
+                      formControlName="supplier" placeholder="Nome do fornecedor" />
+                  </div>
+
+                  <div class="field">
+                    <label class="field__label" for="doc_date-{{ entry.id }}">Data</label>
+                    <input id="doc_date-{{ entry.id }}" class="field__input" type="date"
+                      formControlName="doc_date" />
+                  </div>
+
+                  <div class="field">
+                    <label class="field__label" for="value-{{ entry.id }}">Valor (€)</label>
+                    <input id="value-{{ entry.id }}" class="field__input" type="number"
+                      step="0.01" min="0" formControlName="value" placeholder="0.00" />
+                  </div>
+
+                  <div class="field">
+                    <label class="field__label" for="nif-{{ entry.id }}">NIF / VAT</label>
+                    <input id="nif-{{ entry.id }}" class="field__input" type="text"
+                      formControlName="nif" placeholder="123456789 ou DE123456789" />
+                  </div>
+
+                  <div class="field">
+                    <label class="field__label" for="country-{{ entry.id }}">País</label>
+                    <input id="country-{{ entry.id }}" class="field__input" type="text"
+                      formControlName="country" placeholder="Portugal" />
+                  </div>
+
+                  <div class="field field--wide">
+                    <label class="field__label" for="dest_path-{{ entry.id }}">
+                      Caminho destino
+                      @if (form.controls.dest_path.invalid && form.controls.dest_path.touched) {
+                        <span class="field__error" role="alert">Obrigatório</span>
+                      }
+                    </label>
+                    <input id="dest_path-{{ entry.id }}" class="field__input"
+                      [class.field__input--invalid]="form.controls.dest_path.invalid && form.controls.dest_path.touched"
+                      type="text" formControlName="dest_path" placeholder="2025/Q1/JAN" />
+                  </div>
+
+                  <div class="field field--wide">
+                    <label class="field__label" for="dest_file_name-{{ entry.id }}">
+                      Nome do ficheiro
+                      @if (form.controls.dest_file_name.invalid && form.controls.dest_file_name.touched) {
+                        <span class="field__error" role="alert">Obrigatório</span>
+                      }
+                    </label>
+                    <input id="dest_file_name-{{ entry.id }}" class="field__input"
+                      [class.field__input--invalid]="form.controls.dest_file_name.invalid && form.controls.dest_file_name.touched"
+                      type="text" formControlName="dest_file_name"
+                      placeholder="2025-01-15_fornecedor_150.00.pdf" />
+                  </div>
+                </div>
+
+                <div class="review__form-actions">
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--sm"
+                    (click)="onIgnore(entry)"
+                    [disabled]="actionBusy()"
+                    aria-label="Ignorar este documento"
+                  >
+                    <mat-icon>do_not_disturb</mat-icon>
+                    Ignorar
+                  </button>
+                  <button
+                    type="submit"
+                    class="btn btn--primary btn--sm"
+                    [disabled]="actionBusy() || form.invalid"
+                    [attr.aria-busy]="actionBusy()"
+                  >
+                    <mat-icon>check</mat-icon>
+                    @if (actionBusy()) { A mover… } @else { Aprovar e mover }
+                  </button>
+                </div>
+              </form>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</div>

@@ -1,0 +1,79 @@
+@use '@angular/material' as mat;
+
+// ============================================================
+// TEMAS MATERIAL M3
+// ============================================================
+$dark-theme: mat.define-theme((
+  color: (
+    theme-type: dark,
+    primary: mat.$violet-palette,
+    tertiary: mat.$violet-palette,
+  ),
+  typography: (
+    brand-family: 'Inter',
+    plain-family: 'Inter',
+  ),
+  density: (scale: 0),
+));
+
+$light-theme: mat.define-theme((
+  color: (
+    theme-type: light,
+    primary: mat.$violet-palette,
+    tertiary: mat.$violet-palette,
+  ),
+  typography: (
+    brand-family: 'Inter',
+    plain-family: 'Inter',
+  ),
+  density: (scale: 0),
+));
+
+// ============================================================
+// TOKENS CSS STAXIO
+// ============================================================
+:root {
+  --stx-bg:               #0d1117;
+  --stx-surface:          #161b27;
+  --stx-surface-2:        #1c2333;
+  --stx-border:           #2a3347;
+  --stx-text:             #e2e8f0;
+  --stx-text-muted:       #64748b;
+  --stx-primary:          #818cf8;
+  --stx-primary-hover:    #6366f1;
+  --stx-success:          #22c55e;
+  --stx-warning:          #f59e0b;
+  --stx-error:            #ef4444;
+  --stx-sidebar-width:    240px;
+  --stx-sidebar-collapsed:64px;
+  --stx-topbar-height:    56px;
+  --stx-radius:           8px;
+  --stx-shadow:           0 1px 3px rgb(0 0 0 / 0.4), 0 1px 2px rgb(0 0 0 / 0.3);
+
+  color-scheme: dark;
+}
+
+[data-theme='light'] {
+  --stx-bg:           #f8fafc;
+  --stx-surface:      #ffffff;
+  --stx-surface-2:    #f1f5f9;
+  --stx-border:       #e2e8f0;
+  --stx-text:         #0f172a;
+  --stx-text-muted:   #64748b;
+  --stx-primary:      #4f46e5;
+  --stx-primary-hover:#4338ca;
+  --stx-shadow:       0 1px 3px rgb(0 0 0 / 0.1), 0 1px 2px rgb(0 0 0 / 0.06);
+
+  color-scheme: light;
+}
+
+// ============================================================
+// APLICAR TEMA MATERIAL
+// ============================================================
+html {
+  @include mat.all-component-themes($dark-theme);
+}
+
+[data-theme='light'] {
+  @include mat.all-component-themes($light-theme);
+}

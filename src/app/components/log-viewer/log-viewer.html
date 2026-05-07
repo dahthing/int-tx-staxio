@@ -1,0 +1,70 @@
+<section class="log-viewer" aria-label="Registo de operações">
+  <div class="log-viewer__header">
+    <h2 class="log-viewer__title">Registo</h2>
+    <div class="log-viewer__filters">
+      <select
+        class="log-filter__select"
+        [ngModel]="filterAction()"
+        (ngModelChange)="filterAction.set($any($event))"
+        aria-label="Filtrar por ação">
+        @for (a of actions; track a.value) {
+          <option [value]="a.value">{{ a.label }}</option>
+        }
+      </select>
+
+      <input
+        class="log-filter__input"
+        type="date"
+        [ngModel]="filterDate()"
+        (ngModelChange)="filterDate.set($event)"
+        aria-label="Filtrar por data" />
+
+      <input
+        class="log-filter__input"
+        type="search"
+        placeholder="Ficheiro…"
+        [ngModel]="filterSupplier()"
+        (ngModelChange)="filterSupplier.set($event)"
+        aria-label="Filtrar por ficheiro" />
+
+      @if (filterAction() || filterDate() || filterSupplier()) {
+        <button class="log-filter__clear" type="button" (click)="clearFilters()" aria-label="Limpar filtros">✕</button>
+      }
+
+      <button
+        class="btn btn--ghost btn--sm"
+        type="button"
+        (click)="exportCsv()"
+        [disabled]="filtered().length === 0"
+        title="Exportar CSV">
+        ↓ CSV
+      </button>
+    </div>
+  </div>
+
+  @if (filtered().length === 0) {
+    <p class="log-viewer__empty" role="status">Sem registos.</p>
+  } @else {
+    <ol class="log-viewer__list" reversed>
+      @for (log of filtered(); track log.id) {
+        <li class="log-viewer__entry log-viewer__entry--{{ log.status }}">
+          <span class="log-viewer__time">
+            {{ log.created_at | date:'dd/MM HH:mm:ss' }}
+          </span>
+          <span class="log-viewer__action badge badge--{{ log.action }}">
+            {{ actionLabel[log.action] }}
+          </span>
+          <span class="log-viewer__file" [title]="log.file_name">
+            {{ log.file_name }}
+          </span>
+          @if (log.dest_path) {
+            <span class="log-viewer__path" aria-label="Destino">→ {{ log.dest_path }}</span>
+          }
+          @if (log.error_message) {
+            <span class="log-viewer__error" role="alert">{{ log.error_message }}</span>
+          }
+        </li>
+      }
+    </ol>
+  }
+</section>

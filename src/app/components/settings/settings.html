@@ -1,0 +1,351 @@
+<div class="settings">
+  <header class="settings__header">
+    <h1 class="settings__title">Definições</h1>
+    <p class="settings__subtitle">Configuração das pastas Drive e automação</p>
+  </header>
+
+  <div class="settings__body">
+
+    @if (loading()) {
+      <div class="settings__skeleton" aria-busy="true" aria-label="A carregar">
+        @for (_ of [1,2,3]; track $index) {
+          <div class="skeleton skeleton--row skeleton--full"></div>
+        }
+      </div>
+    } @else {
+      <form [formGroup]="form" (ngSubmit)="onSave()" novalidate>
+
+        <!-- ====================================================
+             PASTAS DRIVE
+             ==================================================== -->
+        <section class="settings__section">
+          <h2 class="settings__section-title">
+            <mat-icon>folder</mat-icon>
+            Pastas Google Drive
+          </h2>
+          <p class="settings__section-desc">
+            IDs das pastas Drive. Encontras-os no URL quando abres a pasta no browser.
+          </p>
+
+          <div class="settings__fields">
+            <div class="field">
+              <label class="field__label" for="inbox">
+                Inbox
+                @if (form.controls.drive_inbox_folder_id.invalid && form.controls.drive_inbox_folder_id.touched) {
+                  <span class="field__error" role="alert">Obrigatório</span>
+                }
+              </label>
+              <input
+                id="inbox"
+                class="field__input"
+                [class.field__input--invalid]="form.controls.drive_inbox_folder_id.invalid && form.controls.drive_inbox_folder_id.touched"
+                type="text"
+                formControlName="drive_inbox_folder_id"
+                placeholder="1Ily9nKfC6Hnqi970kdcx92Xjtrz8V9Q7"
+                autocomplete="off"
+                spellcheck="false"
+              />
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="root">
+                Raiz (nacional)
+                @if (form.controls.drive_root_folder_id.invalid && form.controls.drive_root_folder_id.touched) {
+                  <span class="field__error" role="alert">Obrigatório</span>
+                }
+              </label>
+              <input
+                id="root"
+                class="field__input"
+                [class.field__input--invalid]="form.controls.drive_root_folder_id.invalid && form.controls.drive_root_folder_id.touched"
+                type="text"
+                formControlName="drive_root_folder_id"
+                placeholder="1klmq4RPuov5T9KJeYz7ffOH-avXIptN7"
+                autocomplete="off"
+                spellcheck="false"
+              />
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="internacional">
+                Internacional
+                @if (form.controls.drive_internacional_folder_id.invalid && form.controls.drive_internacional_folder_id.touched) {
+                  <span class="field__error" role="alert">Obrigatório</span>
+                }
+              </label>
+              <input
+                id="internacional"
+                class="field__input"
+                [class.field__input--invalid]="form.controls.drive_internacional_folder_id.invalid && form.controls.drive_internacional_folder_id.touched"
+                type="text"
+                formControlName="drive_internacional_folder_id"
+                placeholder="1gonX4rK5wP5N_7615tOdUw1E1EFs7iOo"
+                autocomplete="off"
+                spellcheck="false"
+              />
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="faturas_vendas">
+                Faturas Vendas
+                @if (form.controls.drive_faturas_vendas_folder_id.invalid && form.controls.drive_faturas_vendas_folder_id.touched) {
+                  <span class="field__error" role="alert">Obrigatório</span>
+                }
+              </label>
+              <input
+                id="faturas_vendas"
+                class="field__input"
+                [class.field__input--invalid]="form.controls.drive_faturas_vendas_folder_id.invalid && form.controls.drive_faturas_vendas_folder_id.touched"
+                type="text"
+                formControlName="drive_faturas_vendas_folder_id"
+                placeholder="1ZHYr7mXTFifFMO9FNRWo6dzqWw3iVv8d"
+                autocomplete="off"
+                spellcheck="false"
+              />
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="extratos">
+                Extratos Bancários
+                @if (form.controls.drive_extratos_folder_id.invalid && form.controls.drive_extratos_folder_id.touched) {
+                  <span class="field__error" role="alert">Obrigatório</span>
+                }
+              </label>
+              <input
+                id="extratos"
+                class="field__input"
+                [class.field__input--invalid]="form.controls.drive_extratos_folder_id.invalid && form.controls.drive_extratos_folder_id.touched"
+                type="text"
+                formControlName="drive_extratos_folder_id"
+                placeholder="1Bul9s71rvh0ijYjhKNRF9gMNJ2tFDMpN"
+                autocomplete="off"
+                spellcheck="false"
+              />
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="compras">
+                Compras &amp; Matérias Primas
+                @if (form.controls.drive_compras_folder_id.invalid && form.controls.drive_compras_folder_id.touched) {
+                  <span class="field__error" role="alert">Obrigatório</span>
+                }
+              </label>
+              <input
+                id="compras"
+                class="field__input"
+                [class.field__input--invalid]="form.controls.drive_compras_folder_id.invalid && form.controls.drive_compras_folder_id.touched"
+                type="text"
+                formControlName="drive_compras_folder_id"
+                placeholder="1G7OOdefj6aod2AHLypzhs-yxettbxEr5"
+                autocomplete="off"
+                spellcheck="false"
+              />
+            </div>
+          </div>
+        </section>
+
+        <!-- ====================================================
+             AUTOMAÇÃO
+             ==================================================== -->
+        <section class="settings__section">
+          <h2 class="settings__section-title">
+            <mat-icon>schedule</mat-icon>
+            Automação
+          </h2>
+
+          <div class="settings__toggle-row">
+            <div>
+              <p class="settings__toggle-label">pg_cron activo</p>
+              <p class="settings__toggle-desc">
+                Classifica a inbox automaticamente a cada 5 minutos via pg_cron.
+              </p>
+            </div>
+            <mat-slide-toggle
+              formControlName="cron_enabled"
+              color="primary"
+              aria-label="Activar pg_cron"
+            />
+          </div>
+        </section>
+
+        <div class="settings__save">
+          <button
+            type="submit"
+            class="btn btn--primary"
+            [disabled]="saving() || form.invalid"
+            [attr.aria-busy]="saving()"
+          >
+            <mat-icon>save</mat-icon>
+            @if (saving()) { A guardar… } @else { Guardar definições }
+          </button>
+        </div>
+      </form>
+
+      <!-- ====================================================
+           ACÇÕES MANUAIS
+           ==================================================== -->
+      <section class="settings__section">
+        <h2 class="settings__section-title">
+          <mat-icon>bolt</mat-icon>
+          Acções manuais
+        </h2>
+
+        <div class="settings__actions">
+          <div class="settings__action-card">
+            <div>
+              <p class="settings__action-label">Testar ligação Drive</p>
+              <p class="settings__action-desc">
+                Verifica se a Service Account consegue aceder à pasta inbox.
+              </p>
+            </div>
+            <button
+              class="btn btn--ghost"
+              type="button"
+              (click)="onTestDrive()"
+              [disabled]="testing() || processing()"
+              [attr.aria-busy]="testing()"
+            >
+              <mat-icon>wifi_tethering</mat-icon>
+              @if (testing()) { A testar… } @else { Testar }
+            </button>
+          </div>
+
+          @if (testResult()) {
+            <div
+              class="settings__test-result"
+              [class.settings__test-result--ok]="testResult()!.ok"
+              [class.settings__test-result--error]="!testResult()!.ok"
+              role="status"
+            >
+              <mat-icon>{{ testResult()!.ok ? 'check_circle' : 'error' }}</mat-icon>
+              {{ testResult()!.message }}
+            </div>
+          }
+
+          <div class="settings__action-card">
+            <div>
+              <p class="settings__action-label">Processar agora</p>
+              <p class="settings__action-desc">
+                Executa /classify + /move imediatamente, sem esperar pelo cron.
+              </p>
+            </div>
+            <button
+              class="btn btn--primary"
+              type="button"
+              (click)="onProcessNow()"
+              [disabled]="processing() || testing()"
+              [attr.aria-busy]="processing()"
+            >
+              <mat-icon>play_arrow</mat-icon>
+              @if (processing()) { A processar… } @else { Processar agora }
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== FORNECEDORES ===== -->
+      <section class="settings__section" aria-labelledby="suppliers-heading">
+        <h2 class="settings__section-title" id="suppliers-heading">Fornecedores</h2>
+
+        @if (suppliersLoading()) {
+          <p class="settings__hint">A carregar fornecedores…</p>
+        } @else {
+          <div class="settings__suppliers-list" role="list">
+            @for (s of suppliers(); track s.id) {
+              <div class="settings__supplier-row" role="listitem">
+                <div class="settings__supplier-meta">
+                  <span class="settings__supplier-name">{{ s.name }}</span>
+                  @if (s.auto_detected) {
+                    <span class="settings__badge settings__badge--auto" aria-label="Auto-detectado pela IA">Auto-detectado</span>
+                  }
+                </div>
+
+                <div class="settings__supplier-fields">
+                  <label class="settings__label" [for]="'kw-' + s.id">Keywords</label>
+                  <input
+                    [id]="'kw-' + s.id"
+                    class="settings__input"
+                    type="text"
+                    [value]="s.keywords.join(', ')"
+                    #kwInput
+                    (blur)="saveSupplierKeywords(s, kwInput.value)"
+                    aria-label="Keywords de detecção para {{ s.name }}"
+                  />
+
+                  <label class="settings__label" [for]="'type-' + s.id">Tipo</label>
+                  <select
+                    [id]="'type-' + s.id"
+                    class="settings__select"
+                    [value]="s.type"
+                    (change)="saveSupplierType(s, $any($event.target).value)"
+                    aria-label="Tipo de fornecedor para {{ s.name }}"
+                  >
+                    <option value="normal">Normal</option>
+                    <option value="ecommerce">eCommerce</option>
+                    <option value="bank">Banco</option>
+                    <option value="supplies">Compras/Matérias-primas</option>
+                  </select>
+                </div>
+
+                <mat-slide-toggle
+                  [checked]="s.active"
+                  (change)="toggleSupplier(s)"
+                  [attr.aria-label]="s.active ? 'Desactivar ' + s.name : 'Activar ' + s.name"
+                  color="primary"
+                />
+              </div>
+            }
+          </div>
+
+          <button
+            class="btn btn--ghost"
+            type="button"
+            (click)="showNewSupplierForm()"
+          >
+            <mat-icon>add</mat-icon>
+            Adicionar fornecedor
+          </button>
+
+          @if (newSupplierVisible()) {
+            <form
+              class="settings__new-supplier"
+              [formGroup]="newSupplierForm"
+              (ngSubmit)="addSupplier()"
+              aria-label="Novo fornecedor"
+            >
+              <div class="settings__field">
+                <label class="settings__label" for="ns-name">Nome</label>
+                <input id="ns-name" class="settings__input" formControlName="name" type="text" autocomplete="off" />
+              </div>
+              <div class="settings__field">
+                <label class="settings__label" for="ns-nif">NIF (opcional)</label>
+                <input id="ns-nif" class="settings__input" formControlName="nif" type="text" autocomplete="off" />
+              </div>
+              <div class="settings__field">
+                <label class="settings__label" for="ns-keywords">Keywords (vírgula separadas)</label>
+                <input id="ns-keywords" class="settings__input" formControlName="keywords" type="text" autocomplete="off" />
+              </div>
+              <div class="settings__field">
+                <label class="settings__label" for="ns-type">Tipo</label>
+                <select id="ns-type" class="settings__select" formControlName="type">
+                  <option value="normal">Normal</option>
+                  <option value="ecommerce">eCommerce</option>
+                  <option value="bank">Banco</option>
+                  <option value="supplies">Compras/Matérias-primas</option>
+                </select>
+              </div>
+              <div class="settings__form-actions">
+                <button class="btn btn--primary" type="submit" [disabled]="newSupplierForm.invalid">
+                  <mat-icon>save</mat-icon> Guardar
+                </button>
+                <button class="btn btn--ghost" type="button" (click)="cancelNewSupplier()">
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          }
+        }
+      </section>
+    }
+  </div>
+</div>

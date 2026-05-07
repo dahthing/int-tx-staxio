@@ -1,0 +1,119 @@
+<aside class="metadata-form" role="complementary" aria-label="Editar metadados">
+  <header class="metadata-form__header">
+    <h2 class="metadata-form__title">Editar metadados</h2>
+    <p class="metadata-form__file" [title]="entry().file_name">{{ entry().file_name }}</p>
+  </header>
+
+  <form
+    class="metadata-form__body"
+    [formGroup]="form"
+    (ngSubmit)="onSubmit()"
+    novalidate
+    aria-label="Formulário de metadados"
+  >
+    <div class="field">
+      <label class="field__label" for="supplier">Fornecedor</label>
+      <input
+        id="supplier"
+        class="field__input"
+        type="text"
+        formControlName="supplier"
+        autocomplete="organization"
+        placeholder="Nome do fornecedor"
+      />
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="doc_date">Data do documento</label>
+      <input
+        id="doc_date"
+        class="field__input"
+        type="date"
+        formControlName="doc_date"
+      />
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="value">Valor (€)</label>
+      <input
+        id="value"
+        class="field__input"
+        type="number"
+        step="0.01"
+        min="0"
+        formControlName="value"
+        placeholder="0.00"
+      />
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="nif">NIF / VAT</label>
+      <input
+        id="nif"
+        class="field__input"
+        type="text"
+        formControlName="nif"
+        placeholder="123456789 ou DE123456789"
+      />
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="dest_path">
+        Caminho destino
+        @if (form.controls.dest_path.invalid && form.controls.dest_path.touched) {
+          <span class="field__error" role="alert">Obrigatório</span>
+        }
+      </label>
+      <input
+        id="dest_path"
+        class="field__input"
+        [class.field__input--invalid]="form.controls.dest_path.invalid && form.controls.dest_path.touched"
+        type="text"
+        formControlName="dest_path"
+        placeholder="2025/Q1/JAN"
+        aria-describedby="dest_path_hint"
+      />
+      <span id="dest_path_hint" class="field__hint">Ex: 2025/Q1/JAN ou Internacional/2025/Q1/JAN</span>
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="dest_file_name">
+        Nome do ficheiro destino
+        @if (form.controls.dest_file_name.invalid && form.controls.dest_file_name.touched) {
+          <span class="field__error" role="alert">Obrigatório</span>
+        }
+      </label>
+      <input
+        id="dest_file_name"
+        class="field__input"
+        [class.field__input--invalid]="form.controls.dest_file_name.invalid && form.controls.dest_file_name.touched"
+        type="text"
+        formControlName="dest_file_name"
+        placeholder="2025-01-15_fornecedor_150.00.pdf"
+      />
+    </div>
+
+    @if (error()) {
+      <p class="metadata-form__error" role="alert">{{ error() }}</p>
+    }
+
+    <div class="metadata-form__actions">
+      <button
+        type="button"
+        class="btn btn--ghost"
+        (click)="cancelled.emit()"
+        [disabled]="saving()"
+      >
+        Cancelar
+      </button>
+      <button
+        type="submit"
+        class="btn btn--primary"
+        [disabled]="saving() || form.invalid"
+        [attr.aria-busy]="saving()"
+      >
+        @if (saving()) { A guardar… } @else { Guardar }
+      </button>
+    </div>
+  </form>
+</aside>
