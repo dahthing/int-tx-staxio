@@ -84,16 +84,15 @@
       <app-inbox-list [entries]="entries()" (move)="onMoveOne($event)" (statusChange)="onStatusChange($event)"
         (edit)="onEdit($event)" />
       }
-
-    @if (editingEntry()) {
-      <app-metadata-form [entry]="editingEntry()!" (saved)="onEditSaved()" (cancelled)="onEditCancelled()" />
-      }
   </section>
-  
-  <!-- LOG DRAWER -->
-  @if (logDrawerOpen()) {
-  <div class="dashboard__drawer-overlay" (click)="toggleLogDrawer()" aria-hidden="true"></div>
+
+  <!-- DRAWERS OVERLAY -->
+  @if (logDrawerOpen() || editDrawerOpen()) {
+  <div class="dashboard__drawer-overlay" (click)="logDrawerOpen() ? toggleLogDrawer() : onEditCancelled()"
+    aria-hidden="true"></div>
   }
+
+  <!-- LOG DRAWER -->
   <aside id="log-drawer" class="dashboard__log-drawer" [class.dashboard__log-drawer--open]="logDrawerOpen()"
     role="complementary" aria-label="Log de processamento">
     <div class="dashboard__log-drawer-header">
@@ -103,5 +102,20 @@
       </button>
     </div>
     <app-log-viewer [logs]="logs()" />
-    </aside>
+  </aside>
+<!-- EDIT DRAWER -->
+<aside class="dashboard__log-drawer dashboard__edit-drawer" [class.dashboard__log-drawer--open]="editDrawerOpen()"
+  role="dialog" aria-modal="true" aria-label="Editar metadados">
+  <div class="dashboard__log-drawer-header">
+    <h2 class="dashboard__log-drawer-title">Editar metadados</h2>
+    <button class="btn btn--ghost btn--sm" type="button" (click)="onEditCancelled()" aria-label="Fechar">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+  @if (editingEntry()) {
+  <div class="dashboard__edit-drawer-content">
+    <app-metadata-form [entry]="editingEntry()!" (saved)="onEditSaved()" (cancelled)="onEditCancelled()" />
+  </div>
+  }
+</aside>
 </div>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Black background -->
+  <rect width="512" height="512" fill="#000000"/>
+  <!-- TX logo: T -->
+  <rect x="130" y="140" width="130" height="22" fill="#ffffff" rx="4"/>
+  <rect x="182" y="140" width="22" height="232" fill="#ffffff" rx="4"/>
+  <!-- TX logo: X (two curved strokes crossing) -->
+  <!-- Top-left to bottom-right stroke -->
+  <path d="M290 140 Q340 200 370 256 Q340 312 290 372" stroke="#ffffff" stroke-width="22" stroke-linecap="round" fill="none"/>
+  <!-- Top-right to bottom-left stroke -->
+  <path d="M382 140 Q332 200 302 256 Q332 312 382 372" stroke="#ffffff" stroke-width="22" stroke-linecap="round" fill="none"/>
+</svg>

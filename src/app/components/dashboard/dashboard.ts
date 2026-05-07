@@ -69,6 +69,9 @@ export class Dashboard implements AfterViewInit, OnDestroy {
   readonly logDrawerOpen = this.#logDrawerOpen.asReadonly();
   toggleLogDrawer(): void { this.#logDrawerOpen.update(v => !v); }
 
+  readonly #editDrawerOpen = signal(false);
+  readonly editDrawerOpen = this.#editDrawerOpen.asReadonly();
+
   readonly #editingEntry = signal<QueueEntry | null>(null);
   readonly editingEntry = this.#editingEntry.asReadonly();
 
@@ -134,15 +137,18 @@ export class Dashboard implements AfterViewInit, OnDestroy {
 
   onEdit(entry: QueueEntry): void {
     this.#editingEntry.set(entry);
+    this.#editDrawerOpen.set(true);
   }
 
   onEditSaved(): void {
-    this.#editingEntry.set(null);
+    this.#editDrawerOpen.set(false);
+    setTimeout(() => this.#editingEntry.set(null), 300);
     void this.#queue.loadAll();
     this.#toast('Metadados guardados', 'success');
   }
 
   onEditCancelled(): void {
-    this.#editingEntry.set(null);
+    this.#editDrawerOpen.set(false);
+    setTimeout(() => this.#editingEntry.set(null), 300);
   }
 }
