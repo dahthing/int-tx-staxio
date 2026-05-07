@@ -4,55 +4,26 @@
        HEADER
        ==================================================== -->
   <header class="dashboard__header">
-    <div class="dashboard__header-top">
-      <div>
-        <h1 class="dashboard__title">Dashboard</h1>
-        <p class="dashboard__subtitle">Documentos fiscais em processamento</p>
-      </div>
+    <h1 class="dashboard__title">Dashboard</h1>
+<div class="dashboard__stats" role="group" aria-label="Estatísticas">
+  <span class="stat-badge stat-badge--pending">{{ pendingCount() }} pendentes</span>
+  <span class="stat-badge stat-badge--error">{{ errorCount() }} erros</span>
+  <span class="stat-badge stat-badge--done">{{ doneCount() }} concluídos</span>
+  <span class="stat-badge">{{ entries().length }} total</span>
+</div>
 
-      <div class="dashboard__actions">
-        <button
-          class="btn btn--ghost btn--sm"
-          type="button"
-          (click)="onClassify()"
-          [disabled]="actionBusy()"
-          aria-label="Classificar novos documentos da inbox"
-        >
-          <mat-icon>cloud_download</mat-icon>
-          @if (actionBusy()) { A processar… } @else { Classificar inbox }
-        </button>
+    <div class="dashboard__actions">
+      <button class="btn btn--ghost btn--sm" type="button" (click)="onClassify()" [disabled]="actionBusy()"
+        aria-label="Classificar novos documentos da inbox">
+        <mat-icon>cloud_download</mat-icon>
+        @if (actionBusy()) { A processar… } @else { Classificar inbox }
+      </button>
 
-        <button
-          class="btn btn--primary btn--sm"
-          type="button"
-          (click)="onMoveAll()"
-          [disabled]="actionBusy() || pendingCount() === 0"
-          aria-label="Mover todos os documentos pendentes"
-        >
-          <mat-icon>drive_file_move</mat-icon>
-          Mover todos ({{ pendingCount() }})
-        </button>
-      </div>
-    </div>
-
-    <!-- STATS -->
-    <div class="dashboard__stats" role="group" aria-label="Estatísticas">
-      <div class="stat">
-        <span class="stat__value stat__value--pending">{{ pendingCount() }}</span>
-        <span class="stat__label">Pendentes</span>
-      </div>
-      <div class="stat">
-        <span class="stat__value stat__value--error">{{ errorCount() }}</span>
-        <span class="stat__label">Com erro</span>
-      </div>
-      <div class="stat">
-        <span class="stat__value stat__value--done">{{ doneCount() }}</span>
-        <span class="stat__label">Concluídos</span>
-      </div>
-      <div class="stat">
-        <span class="stat__value">{{ entries().length }}</span>
-        <span class="stat__label">Total</span>
-      </div>
+      <button class="btn btn--primary btn--sm" type="button" (click)="onMoveAll()"
+        [disabled]="actionBusy() || pendingCount() === 0" aria-label="Mover todos os documentos pendentes">
+        <mat-icon>drive_file_move</mat-icon>
+        Mover todos ({{ pendingCount() }})
+      </button>
     </div>
   </header>
 

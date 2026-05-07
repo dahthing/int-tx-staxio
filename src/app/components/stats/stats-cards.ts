@@ -57,25 +57,25 @@ import { QueueService } from '../../services/queue.service';
       background: var(--stx-surface);
       border: 1px solid var(--stx-border);
       border-radius: var(--stx-radius);
-      padding: 1.25rem 1rem;
+      padding: 0.75rem 1rem;
       display: flex;
       flex-direction: column;
-      gap: 0.25rem;
+      gap: 0.125rem;
       &--wide { grid-column: span 2; }
       &__icon {
-        font-size: 24px; width: 24px; height: 24px;
-        margin-bottom: 0.25rem;
+        font-size: 18px; width: 18px; height: 18px;
+        margin-bottom: 0.125rem;
         &--done    { color: var(--stx-success); }
         &--primary { color: var(--stx-primary); }
         &--error   { color: var(--stx-error); }
         &--warning { color: var(--stx-warning); }
       }
       &__value {
-        font-size: 1.75rem; font-weight: 700; line-height: 1;
+        font-size: 1.25rem; font-weight: 700; line-height: 1;
         font-variant-numeric: tabular-nums;
       }
       &__label {
-        font-size: 0.75rem; color: var(--stx-text-muted);
+        font-size: 0.6875rem; color: var(--stx-text-muted);
         text-transform: uppercase; letter-spacing: 0.05em;
       }
     }
