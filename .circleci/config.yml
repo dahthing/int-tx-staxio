@@ -1,0 +1,201 @@
+# Javascript Node CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-javascript/ for more details
+#
+version: 2.1
+
+parameters:
+  CIRCLE_NODE_VERSION:
+    type: string
+    default: "cimg/node:24.14.1"
+  server_path_prod:
+    type: string
+    default: "/var/www/staxio.targx.com"
+  server_path_dev:
+    type: string
+    default: "/var/www/staxio.targx.com"
+  folder_path_prod:
+    type: string
+    default: "/tmp/workspace/dist/staxio/browser/*"
+  folder_path_dev:
+    type: string
+    default: "/tmp/workspace/dist/staxio/browser/*"
+
+jobs:
+  # Stands up environment, installing dependencies.
+  # Restores and saves our cache of node_modules.
+  environment:
+    docker:
+      - image: << pipeline.parameters.CIRCLE_NODE_VERSION >>
+
+    parallelism: 2
+    # resource_class: xlarge
+    working_directory: /tmp/workspace
+
+    steps:
+      - checkout
+      - run: node --version
+      - run: sudo apt update
+      #      - run:
+      #          name: install rsync
+      #          command: sudo apt-get install rsync
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "package.json" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+
+      - run: yarn
+
+      - save_cache:
+          paths:
+            - node_modules
+          key: v1-dependencies-{{ checksum "package.json" }}
+
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - "**"
+
+  dev:
+    environment:
+      SENTRY_AUTH_TOKEN: a367b92b71d9257540feb0d3ae8b157667530a6e406619544af1c8cc611c0249
+      SENTRY_ORG: targx-so
+      SENTRY_PROJECT: staxio-dev-frontend
+      SENTRY_ENVIRONMENT: develop
+      SENTRY_LOG_LEVEL: debug
+
+    docker:
+      - image: << pipeline.parameters.CIRCLE_NODE_VERSION >>
+
+    parallelism: 2
+    # resource_class: xlarge
+    working_directory: /tmp/workspace
+
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+
+      - run:
+          name: Select environment variables.
+          command: |
+            echo "export ANGULAR_CONFIGURATION=development" >> $BASH_ENV
+
+      - run: node --version
+      - run: sudo apt update
+
+      - run: yarn build:dev
+
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - dist
+      - add_ssh_keys:
+          fingerprints:
+            - "4e:be:f4:e5:a5:bf:87:08:c5:c8:ae:e1:ed:29:fa:68"
+      - run:
+          name: echo host variable
+          command: ssh-keyscan -p $SSH_PORT $SSH_HOST
+      - run:
+          name: fix host authenticity for production server
+          command: ssh-keyscan -p $SSH_PORT $SSH_HOST >> ~/.ssh/known_hosts
+      - run:
+          name: install rsync
+          command: sudo apt install rsync
+      # - run:
+      #     name: Create release and notify Sentry of deploy
+      #     command: |
+      #       curl -sL https://sentry.io/get-cli/ | bash
+      #       export SENTRY_RELEASE=$(sentry-cli releases propose-version)
+      #       sentry-cli releases new -p $SENTRY_PROJECT $SENTRY_RELEASE
+      #       sentry-cli releases set-commits $SENTRY_RELEASE --auto
+      #       sentry-cli releases finalize $SENTRY_RELEASE
+      #       sentry-cli deploys new -e $SENTRY_ENVIRONMENT
+
+      - run:
+          name: Deploy Over SSH
+          command: |
+            rsync -avz --delete -e "ssh -p$SSH_PORT" --progress --partial --human-readable << pipeline.parameters.folder_path_dev >> $SSH_USER@$SSH_HOST:<< pipeline.parameters.server_path_dev >>
+
+  # Builds a distributable bundle for production.
+  build:
+    environment:
+      SENTRY_AUTH_TOKEN: a367b92b71d9257540feb0d3ae8b157667530a6e406619544af1c8cc611c0249
+      SENTRY_ORG: targx-so
+      SENTRY_PROJECT: staxio-prod-frontend
+      SENTRY_ENVIRONMENT: production
+      SENTRY_LOG_LEVEL: debug
+
+    docker:
+      - image: << pipeline.parameters.CIRCLE_NODE_VERSION >>
+
+    parallelism: 2
+    # resource_class: xlarge
+    working_directory: /tmp/workspace
+
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+
+      - run:
+          name: Select environment variables.
+          command: |
+            echo "export ANGULAR_CONFIGURATION=production" >> $BASH_ENV
+
+      - run: node --version
+      - run: sudo apt update
+
+      - run: yarn build
+
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - dist
+      - add_ssh_keys:
+          fingerprints:
+            - "4e:be:f4:e5:a5:bf:87:08:c5:c8:ae:e1:ed:29:fa:68"
+      - run:
+          name: echo host variable
+          command: ssh-keyscan -p $SSH_PORT $SSH_HOST
+      - run:
+          name: fix host authenticity for production server
+          command: ssh-keyscan -p $SSH_PORT $SSH_HOST >> ~/.ssh/known_hosts
+      - run:
+          name: install rsync
+          command: sudo apt install rsync
+      # - run:
+      #     name: Create release and notify Sentry of deploy
+      #     command: |
+      #       curl -sL https://sentry.io/get-cli/ | bash
+      #       export SENTRY_RELEASE=$(sentry-cli releases propose-version)
+      #       sentry-cli releases new -p $SENTRY_PROJECT $SENTRY_RELEASE
+      #       sentry-cli releases set-commits $SENTRY_RELEASE --auto
+      #       sentry-cli releases finalize $SENTRY_RELEASE
+      #       sentry-cli deploys new -e $SENTRY_ENVIRONMENT
+
+      - run:
+          name: Deploy Over SSH
+          command: |
+            rsync -avz --delete -e "ssh -p$SSH_PORT" --progress --partial --human-readable << pipeline.parameters.folder_path_prod >> $SSH_USER@$SSH_HOST:<< pipeline.parameters.server_path_prod >>
+
+workflows:
+  version: 2
+  "deploy":
+    jobs:
+      - environment
+      - dev:
+          requires:
+            - environment
+          filters:
+            branches:
+              only:
+                - develop
+      - build:
+          requires:
+            - environment
+          filters:
+            branches:
+              only:
+                - main
