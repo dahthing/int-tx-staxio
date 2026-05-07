@@ -245,105 +245,139 @@
 
       <!-- ===== FORNECEDORES ===== -->
       <section class="settings__section" aria-labelledby="suppliers-heading">
-        <h2 class="settings__section-title" id="suppliers-heading">Fornecedores</h2>
+        <div class="settings__section-header">
+          <div>
+            <h2 class="settings__section-title" id="suppliers-heading">
+              <mat-icon>storefront</mat-icon>
+              Fornecedores
+            </h2>
+            <p class="settings__section-desc">
+              Fornecedores detectados automaticamente pela IA ou adicionados manualmente.
+            </p>
+          </div>
+          <button class="btn btn--primary btn--sm" type="button" (click)="showNewSupplierForm()">
+            <mat-icon>add</mat-icon>
+            Novo fornecedor
+          </button>
+        </div>
 
         @if (suppliersLoading()) {
-          <p class="settings__hint">A carregar fornecedores…</p>
+          <div class="settings__skeleton" aria-busy="true">
+            @for (_ of [1,2,3,4]; track $index) {
+            <div class="skeleton skeleton--row skeleton--full"></div>
+            }
+          </div>
+          } @else if (suppliers().length === 0) {
+          <div class="settings__empty">
+            <mat-icon>storefront</mat-icon>
+            <p>Nenhum fornecedor registado</p>
+          </div>
         } @else {
-          <div class="settings__suppliers-list" role="list">
+          <div class="suppliers-table" role="table" aria-label="Lista de fornecedores">
+            <!-- header -->
+            <div class="suppliers-table__head" role="row">
+              <span role="columnheader">Nome</span>
+              <span role="columnheader">NIF</span>
+              <span role="columnheader">Tipo</span>
+              <span role="columnheader">Keywords</span>
+              <span role="columnheader">Estado</span>
+            </div>
+
             @for (s of suppliers(); track s.id) {
-              <div class="settings__supplier-row" role="listitem">
-                <div class="settings__supplier-meta">
-                  <span class="settings__supplier-name">{{ s.name }}</span>
+              <div class="suppliers-table__row" [class.suppliers-table__row--inactive]="!s.active" role="row">
+              
+                <!-- Nome + badge auto -->
+                <div class="suppliers-table__cell" role="cell">
+                  <span class="suppliers-table__name">{{ s.name }}</span>
                   @if (s.auto_detected) {
-                    <span class="settings__badge settings__badge--auto" aria-label="Auto-detectado pela IA">Auto-detectado</span>
+                    <span class="suppliers-table__auto-badge" title="Detectado automaticamente pela IA">IA</span>
                   }
                 </div>
 
-                <div class="settings__supplier-fields">
-                  <label class="settings__label" [for]="'kw-' + s.id">Keywords</label>
-                  <input
-                    [id]="'kw-' + s.id"
-                    class="settings__input"
-                    type="text"
-                    [value]="s.keywords.join(', ')"
-                    #kwInput
-                    (blur)="saveSupplierKeywords(s, kwInput.value)"
-                    aria-label="Keywords de detecção para {{ s.name }}"
-                  />
+                <!-- NIF -->
+                <div class="suppliers-table__cell suppliers-table__cell--mono" role="cell">
+                  {{ s.nif ?? '—' }}
+                </div>
 
-                  <label class="settings__label" [for]="'type-' + s.id">Tipo</label>
+                <!-- Tipo (select inline) -->
+                <div class="suppliers-table__cell" role="cell">
                   <select
-                    [id]="'type-' + s.id"
-                    class="settings__select"
+                    class="suppliers-table__select"
                     [value]="s.type"
                     (change)="saveSupplierType(s, $any($event.target).value)"
-                    aria-label="Tipo de fornecedor para {{ s.name }}"
+                    [attr.aria-label]="'Tipo de ' + s.name"
                   >
                     <option value="normal">Normal</option>
                     <option value="ecommerce">eCommerce</option>
                     <option value="bank">Banco</option>
-                    <option value="supplies">Compras/Matérias-primas</option>
+                    <option value="supplies">Compras / MP</option>
                   </select>
                 </div>
 
-                <mat-slide-toggle
-                  [checked]="s.active"
-                  (change)="toggleSupplier(s)"
-                  [attr.aria-label]="s.active ? 'Desactivar ' + s.name : 'Activar ' + s.name"
-                  color="primary"
-                />
-              </div>
-            }
-          </div>
+                <!-- Keywords (input inline) -->
+                <div class="suppliers-table__cell suppliers-table__cell--keywords" role="cell">
+                  <input class="suppliers-table__input" type="text" [value]="s.keywords.join(', ')" #kwInput
+                    (blur)="saveSupplierKeywords(s, kwInput.value)" [attr.aria-label]="'Keywords de ' + s.name"
+                    placeholder="ex: amazon, amzn" />
+                </div>
 
-          <button
-            class="btn btn--ghost"
-            type="button"
-            (click)="showNewSupplierForm()"
-          >
-            <mat-icon>add</mat-icon>
-            Adicionar fornecedor
-          </button>
+                <!-- Toggle activo -->
+                <div class="suppliers-table__cell suppliers-table__cell--toggle" role="cell">
+                  <button
+                    class="suppliers-table__toggle"
+                    [class.suppliers-table__toggle--on]="s.active"
+                    type="button"
+                    (click)="toggleSupplier(s)"
+                    [attr.aria-label]="s.active ? 'Desactivar ' + s.name : 'Activar ' + s.name"
+                    [attr.aria-pressed]="s.active"
+                  >
+                    <span class="suppliers-table__toggle-knob"></span>
+                    </button>
+                  <span class="suppliers-table__toggle-label">{{ s.active ? 'Activo' : 'Inactivo' }}</span>
+                  </div>
+                  
+                  </div>
+                  }
+                  </div>
+                  }
 
-          @if (newSupplierVisible()) {
-            <form
-              class="settings__new-supplier"
-              [formGroup]="newSupplierForm"
-              (ngSubmit)="addSupplier()"
-              aria-label="Novo fornecedor"
-            >
-              <div class="settings__field">
-                <label class="settings__label" for="ns-name">Nome</label>
-                <input id="ns-name" class="settings__input" formControlName="name" type="text" autocomplete="off" />
+        @if (newSupplierVisible()) {
+        <form class="settings__new-supplier" [formGroup]="newSupplierForm" (ngSubmit)="addSupplier()"
+          aria-label="Novo fornecedor">
+            <div class="settings__new-supplier-fields">
+              <div class="field">
+                <label class="field__label" for="ns-name">Nome *</label>
+                <input id="ns-name" class="field__input" formControlName="name" type="text" autocomplete="off"
+                  placeholder="Nome do fornecedor" />
               </div>
-              <div class="settings__field">
-                <label class="settings__label" for="ns-nif">NIF (opcional)</label>
-                <input id="ns-nif" class="settings__input" formControlName="nif" type="text" autocomplete="off" />
+              <div class="field">
+                <label class="field__label" for="ns-nif">NIF</label>
+                <input id="ns-nif" class="field__input" formControlName="nif" type="text" autocomplete="off" placeholder="opcional" />
               </div>
-              <div class="settings__field">
-                <label class="settings__label" for="ns-keywords">Keywords (vírgula separadas)</label>
-                <input id="ns-keywords" class="settings__input" formControlName="keywords" type="text" autocomplete="off" />
+              <div class="field">
+                <label class="field__label" for="ns-keywords">Keywords *</label>
+                <input id="ns-keywords" class="field__input" formControlName="keywords" type="text" autocomplete="off"
+                  placeholder="ex: amazon, amzn" />
               </div>
-              <div class="settings__field">
-                <label class="settings__label" for="ns-type">Tipo</label>
-                <select id="ns-type" class="settings__select" formControlName="type">
+              <div class="field">
+                <label class="field__label" for="ns-type">Tipo *</label>
+                <select id="ns-type" class="field__input" formControlName="type">
                   <option value="normal">Normal</option>
                   <option value="ecommerce">eCommerce</option>
                   <option value="bank">Banco</option>
-                  <option value="supplies">Compras/Matérias-primas</option>
+                  <option value="supplies">Compras / MP</option>
                 </select>
               </div>
-              <div class="settings__form-actions">
-                <button class="btn btn--primary" type="submit" [disabled]="newSupplierForm.invalid">
-                  <mat-icon>save</mat-icon> Guardar
-                </button>
-                <button class="btn btn--ghost" type="button" (click)="cancelNewSupplier()">
-                  Cancelar
-                </button>
+            </div>
+            <div class="settings__form-actions">
+              <button class="btn btn--primary btn--sm" type="submit" [disabled]="newSupplierForm.invalid">
+                <mat-icon>save</mat-icon> Guardar
+              </button>
+              <button class="btn btn--ghost btn--sm" type="button" (click)="cancelNewSupplier()">
+                Cancelar
+              </button>
               </div>
-            </form>
-          }
+              </form>
         }
       </section>
     }

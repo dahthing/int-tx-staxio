@@ -308,6 +308,23 @@ Deno.serve(async (req) => {
       }
     }
 
+    // --------------------------------------------------------
+    // Auto-move: dispara /move em background se houve items
+    // classificados (fire-and-forget, não bloqueia a resposta)
+    // --------------------------------------------------------
+    if (queued > 0) {
+      const moveUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/move`;
+      const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+      fetch(moveUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${serviceKey}`,
+        },
+        body: '{}',
+      }).catch(() => { /* ignora erros de rede no fire-and-forget */ });
+    }
+
     return new Response(
       JSON.stringify({ queued }),
       { headers: { ...CORS, 'Content-Type': 'application/json' } }
