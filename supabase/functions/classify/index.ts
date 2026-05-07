@@ -309,21 +309,28 @@ Deno.serve(async (req) => {
     }
 
     // --------------------------------------------------------
-    // Auto-move: dispara /move em background se houve items
-    // classificados (fire-and-forget, não bloqueia a resposta)
+    // Auto-move: dispara /move após classify para processar
+    // todos os items pending (novos + anteriores não processados).
+    // Usa Promise.race com timeout para não bloquear a resposta
+    // mas garantir que o runtime não corta a fetch prematuramente.
     // --------------------------------------------------------
-    if (queued > 0) {
-      const moveUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/move`;
-      const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-      fetch(moveUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${serviceKey}`,
-        },
-        body: '{}',
-      }).catch(() => { /* ignora erros de rede no fire-and-forget */ });
-    }
+    const moveUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/move`;
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const movePromise = fetch(moveUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${serviceKey}`,
+      },
+      body: '{}',
+    }).catch(() => { /* ignora erros de rede */ });
+
+    // Aguarda até 8s para dar tempo ao /move arrancar; não bloqueia
+    // para além disso (edge function tem limite de 150s total)
+    await Promise.race([
+      movePromise,
+      new Promise(resolve => setTimeout(resolve, 8_000)),
+    ]);
 
     return new Response(
       JSON.stringify({ queued }),
