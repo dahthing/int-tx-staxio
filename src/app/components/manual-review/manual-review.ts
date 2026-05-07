@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { DatePipe, DecimalPipe, SlicePipe } from '@angular/common';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -35,12 +36,23 @@ export class ManualReview implements OnInit {
   readonly #supabase = inject(SUPABASE_CLIENT);
   readonly #fb = inject(FormBuilder);
   readonly #snackBar = inject(MatSnackBar);
+  readonly #sanitizer = inject(DomSanitizer);
 
   readonly #actionBusy = signal(false);
   readonly actionBusy = this.#actionBusy.asReadonly();
 
   readonly #expandedId = signal<string | null>(null);
   readonly expandedId = this.#expandedId.asReadonly();
+
+  readonly previewUrl = computed<SafeResourceUrl | null>(() => {
+    const id = this.#expandedId();
+    if (!id) return null;
+    const entry = this.#queue.entries().find(e => e.id === id);
+    if (!entry) return null;
+    return this.#sanitizer.bypassSecurityTrustResourceUrl(
+      `https://drive.google.com/file/d/${entry.file_id}/preview`
+    );
+  });
 
   readonly items = computed(() =>
     this.#queue.entries().filter(

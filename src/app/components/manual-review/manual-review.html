@@ -53,6 +53,19 @@
 
             <!-- EDIT FORM -->
             @if (expandedId() === entry.id) {
+              <div class="review__split">
+                <div class="review__preview">
+                  @if (previewUrl()) {
+                  <iframe class="review__preview-frame" [src]="previewUrl()!" title="Pré-visualização do documento" allow="autoplay"
+                    sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
+                  } @else {
+                  <div class="review__preview-unavailable">
+                    <mat-icon>description</mat-icon>
+                    <span>Pré-visualização indisponível</span>
+                  </div>
+                  }
+                </div>
+
               <form
                 class="review__form"
                 [formGroup]="form"
@@ -139,6 +152,7 @@
                   </button>
                 </div>
               </form>
+              </div>
             }
           </li>
         }
