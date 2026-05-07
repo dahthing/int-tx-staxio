@@ -123,6 +123,23 @@ html, body {
 }
 
 // ============================================================
+// SCROLLBAR — único, fininho, escuro com polegar vermelho escuro
+// ============================================================
+::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #7a1010;
+  border-radius: 999px;
+  &:hover { background: #9b1515; }
+}
+* { scrollbar-width: thin; scrollbar-color: #7a1010 transparent; }
+
+// ============================================================
 // SCREEN READER ONLY
 // ============================================================
 .sr-only {
