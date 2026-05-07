@@ -65,6 +65,10 @@ export class Dashboard implements AfterViewInit, OnDestroy {
   readonly #actionBusy = signal(false);
   readonly actionBusy = this.#actionBusy.asReadonly();
 
+  readonly #logDrawerOpen = signal(false);
+  readonly logDrawerOpen = this.#logDrawerOpen.asReadonly();
+  toggleLogDrawer(): void { this.#logDrawerOpen.update(v => !v); }
+
   readonly #editingEntry = signal<QueueEntry | null>(null);
   readonly editingEntry = this.#editingEntry.asReadonly();
 

@@ -21,10 +21,15 @@
         <mat-icon>drive_file_move</mat-icon>
         Mover todos ({{ pendingCount() }})
       </button>
+<button class="btn btn--ghost btn--sm" type="button" (click)="toggleLogDrawer()" [attr.aria-expanded]="logDrawerOpen()"
+  aria-controls="log-drawer" aria-label="Ver log de processamento">
+  <mat-icon>receipt_long</mat-icon>
+  Ver logs
+</button>
     </div>
   </div>
   </ng-template>
-  
+
   <div class="dashboard">
 
   <!-- ====================================================
@@ -48,75 +53,55 @@
   <!-- ====================================================
        BODY
        ==================================================== -->
-  <div class="dashboard__body">
-
-    <!-- QUEUE -->
-    <section class="dashboard__queue" aria-label="Fila de processamento">
-      @if (loading()) {
-        <!-- SKELETON -->
-        <div class="dashboard__skeleton" aria-label="A carregar" aria-busy="true">
-          @for (_ of [1,2,3,4,5]; track $index) {
-            <div class="skeleton-row">
-              <div class="skeleton skeleton--text skeleton--w60"></div>
-              <div class="skeleton skeleton--text skeleton--w40"></div>
-              <div class="skeleton skeleton--text skeleton--w40"></div>
-            </div>
-          }
+  <section class="dashboard__queue" aria-label="Fila de processamento">
+    @if (loading()) {
+      <div class="dashboard__skeleton" aria-label="A carregar" aria-busy="true">
+        @for (_ of [1,2,3,4,5]; track $index) {
+        <div class="skeleton-row">
+          <div class="skeleton skeleton--text skeleton--w60"></div>
+          <div class="skeleton skeleton--text skeleton--w40"></div>
+          <div class="skeleton skeleton--text skeleton--w40"></div>
         </div>
-      } @else if (error()) {
-        <!-- ERROR STATE -->
-        <div class="empty-state empty-state--error" role="alert">
-          <mat-icon class="empty-state__icon">cloud_off</mat-icon>
-          <p class="empty-state__title">Erro de ligação</p>
-          <p class="empty-state__desc">{{ error() }}</p>
-        </div>
-      } @else if (entries().length === 0) {
-        <!-- EMPTY STATE -->
-        <div class="empty-state" role="status">
-          <mat-icon class="empty-state__icon">inbox</mat-icon>
-          <p class="empty-state__title">Inbox vazia</p>
-          <p class="empty-state__desc">Coloca PDFs na pasta Drive inbox e clica em "Classificar inbox".</p>
-          <button class="btn btn--primary btn--sm" type="button" (click)="onClassify()" [disabled]="actionBusy()">
-            <mat-icon>cloud_download</mat-icon>
-            Classificar inbox
-          </button>
-        </div>
-      } @else {
-        <app-inbox-list
-          [entries]="entries()"
-          (move)="onMoveOne($event)"
-          (statusChange)="onStatusChange($event)"
-          (edit)="onEdit($event)"
-        />
-      }
-    </section>
-
-    <!-- SIDE PANEL: logs ou form -->
-    <aside class="dashboard__side" aria-label="Painel lateral">
-      @if (editingEntry()) {
-        <app-metadata-form
-          [entry]="editingEntry()!"
-          (saved)="onEditSaved()"
-          (cancelled)="onEditCancelled()"
-        />
-      } @else {
-        @defer (on idle) {
-          @if (logs().length === 0 && !loading()) {
-            <div class="empty-state empty-state--sm" role="status">
-              <mat-icon class="empty-state__icon">receipt_long</mat-icon>
-              <p class="empty-state__title">Sem registos</p>
-            </div>
-          } @else {
-            <app-log-viewer [logs]="logs()" />
-          }
-        } @placeholder {
-          <div class="dashboard__skeleton">
-            @for (_ of [1,2,3]; track $index) {
-              <div class="skeleton skeleton--row skeleton--full"></div>
-            }
-          </div>
         }
+      </div>
+      } @else if (error()) {
+      <div class="empty-state empty-state--error" role="alert">
+        <mat-icon class="empty-state__icon">cloud_off</mat-icon>
+        <p class="empty-state__title">Erro de ligação</p>
+        <p class="empty-state__desc">{{ error() }}</p>
+      </div>
+      } @else if (entries().length === 0) {
+      <div class="empty-state" role="status">
+        <mat-icon class="empty-state__icon">inbox</mat-icon>
+        <p class="empty-state__title">Inbox vazia</p>
+        <p class="empty-state__desc">Coloca PDFs na pasta Drive inbox e clica em "Classificar inbox".</p>
+        <button class="btn btn--primary btn--sm" type="button" (click)="onClassify()" [disabled]="actionBusy()">
+          <mat-icon>cloud_download</mat-icon>
+          Classificar inbox
+        </button>
+      </div>
+      } @else {
+      <app-inbox-list [entries]="entries()" (move)="onMoveOne($event)" (statusChange)="onStatusChange($event)"
+        (edit)="onEdit($event)" />
       }
+
+    @if (editingEntry()) {
+      <app-metadata-form [entry]="editingEntry()!" (saved)="onEditSaved()" (cancelled)="onEditCancelled()" />
+      }
+  </section>
+  
+  <!-- LOG DRAWER -->
+  @if (logDrawerOpen()) {
+  <div class="dashboard__drawer-overlay" (click)="toggleLogDrawer()" aria-hidden="true"></div>
+  }
+  <aside id="log-drawer" class="dashboard__log-drawer" [class.dashboard__log-drawer--open]="logDrawerOpen()"
+    role="complementary" aria-label="Log de processamento">
+    <div class="dashboard__log-drawer-header">
+      <h2 class="dashboard__log-drawer-title">Log de processamento</h2>
+      <button class="btn btn--ghost btn--sm" type="button" (click)="toggleLogDrawer()" aria-label="Fechar log">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+    <app-log-viewer [logs]="logs()" />
     </aside>
-  </div>
 </div>
