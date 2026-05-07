@@ -6,6 +6,12 @@ export interface MonthBucket {
   count: number;
 }
 
+export interface MonthValueBucket {
+  label: string;
+  suppliers: number; // received + ecommerce + international + bank_statement + supplies
+  sales: number;     // issued
+}
+
 export interface SupplierVolume {
   supplier: string;
   count: number;
@@ -37,6 +43,68 @@ export class StatsService {
       const [ey, em] = e.doc_date.split('-').map(Number);
       return ey === y && em === m;
     }).length;
+  });
+
+  /** Valor total das faturas de fornecedores este mês */
+  readonly thisMonthSuppliersValue = computed(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth() + 1;
+    const SUPPLIER_TYPES = ['received', 'ecommerce', 'international', 'bank_statement', 'supplies'];
+    return this.#queue.entries()
+      .filter(e => {
+        if (!e.doc_date || !SUPPLIER_TYPES.includes(e.doc_type ?? '')) return false;
+        const [ey, em] = e.doc_date.split('-').map(Number);
+        return ey === y && em === m;
+      })
+      .reduce((s, e) => s + (e.value ?? 0), 0);
+  });
+
+  /** Valor total das faturas de venda este mês */
+  readonly thisMonthSalesValue = computed(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth() + 1;
+    return this.#queue.entries()
+      .filter(e => {
+        if (e.doc_type !== 'issued' || !e.doc_date) return false;
+        const [ey, em] = e.doc_date.split('-').map(Number);
+        return ey === y && em === m;
+      })
+      .reduce((s, e) => s + (e.value ?? 0), 0);
+  });
+
+  /** Valor mensal separado por fornecedores vs vendas — últimos 12 meses */
+  readonly valueByMonth = computed((): MonthValueBucket[] => {
+    const now = new Date();
+    const SUPPLIER_TYPES = new Set(['received', 'ecommerce', 'international', 'bank_statement', 'supplies']);
+    const buckets = new Map<string, { suppliers: number; sales: number }>();
+
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      buckets.set(key, { suppliers: 0, sales: 0 });
+    }
+
+    for (const entry of this.#queue.entries()) {
+      if (!entry.doc_date || entry.value == null) continue;
+      const key = entry.doc_date.slice(0, 7);
+      if (!buckets.has(key)) continue;
+      const b = buckets.get(key)!;
+      if (entry.doc_type === 'issued') {
+        b.sales += entry.value;
+      } else if (SUPPLIER_TYPES.has(entry.doc_type ?? '')) {
+        b.suppliers += entry.value;
+      }
+    }
+
+    return [...buckets.entries()].map(([key, { suppliers, sales }]) => {
+      const [y, m] = key.split('-').map(Number);
+      const label = new Date(y, m - 1).toLocaleDateString('pt-PT', {
+        month: 'short', year: '2-digit',
+      });
+      return { label, suppliers, sales };
+    });
   });
 
   /** Documentos concluídos agrupados por mês — últimos 12 meses */

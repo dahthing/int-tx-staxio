@@ -35,6 +35,16 @@ import { QueueService } from '../../services/queue.service';
         <span class="stats-card__value">{{ stats.totalValue() | number:'1.2-2' }} €</span>
         <span class="stats-card__label">Volume total</span>
       </div>
+      <div class="stats-card stats-card--wide">
+        <mat-icon class="stats-card__icon stats-card__icon--error">receipt_long</mat-icon>
+        <span class="stats-card__value">{{ stats.thisMonthSuppliersValue() | number:'1.2-2' }} €</span>
+        <span class="stats-card__label">Fornecedores este mês</span>
+      </div>
+      <div class="stats-card stats-card--wide">
+        <mat-icon class="stats-card__icon stats-card__icon--primary">sell</mat-icon>
+        <span class="stats-card__value">{{ stats.thisMonthSalesValue() | number:'1.2-2' }} €</span>
+        <span class="stats-card__label">Vendas este mês</span>
+      </div>
     </div>
   `,
   styles: [`

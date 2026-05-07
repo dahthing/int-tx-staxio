@@ -14,6 +14,7 @@ import { MetadataForm } from '../metadata-form/metadata-form';
 import { QueueEntry, ProcessingStatus } from '../../models/queue-entry.model';
 import { StatsCards } from '../stats/stats-cards';
 import { MonthChart } from '../stats/month-chart';
+import { MonthValueChart } from '../stats/month-value-chart';
 import { TopSuppliers } from '../stats/top-suppliers';
 
 @Component({
@@ -24,6 +25,7 @@ import { TopSuppliers } from '../stats/top-suppliers';
     MetadataForm,
     StatsCards,
     MonthChart,
+    MonthValueChart,
     TopSuppliers,
     MatIconModule,
     MatButtonModule,
