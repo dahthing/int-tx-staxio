@@ -49,3 +49,38 @@
 **Data:** 2025-05-06
 **Decisão:** Pasta `/docs` dentro do projecto Angular. Obsidian aponta para esta pasta.
 **Razão:** Claude no VSCode usa estes ficheiros como contexto em cada sessão, sem precisar de reler o projecto inteiro.
+
+---
+
+## D008 — Path selector: tree-picker live da Drive
+**Data:** 2026-05-08
+**Decisão:** Usar tree-picker live da Drive (edge function `list-folders`) em vez de dropdown de `folder_config`.
+**Razão:** Flexibilidade para navegar qualquer nível da hierarquia de pastas.
+
+---
+
+## D009 — Training: regras determinísticas + few-shot
+**Data:** 2026-05-08
+**Decisão:** Detectar documentos próprios com NIF 514084235 deterministicamente; usar few-shot com `training_examples` para casos ambíguos.
+**Razão:** Regras NIF têm 100% de precisão nos casos claros; few-shot cobre edge cases sem fine-tuning.
+
+---
+
+## D010 — Re-mover documentos concluídos
+**Data:** 2026-05-08
+**Decisão:** Ao mudar pasta de um documento `done`, chamar edge function `move-existing` que move o ficheiro físico na Drive.
+**Razão:** Manter Drive como fonte de verdade (D001); metadados e ficheiro físico devem estar sincronizados.
+
+---
+
+## D011 — SaaS: Supabase project por cliente
+**Data:** 2026-05-08
+**Decisão:** Cada cliente tem o seu projecto Supabase dedicado (DB, Auth, Storage separados).
+**Razão:** Máximo isolamento de dados; compliance GDPR simplificado; portabilidade de dados por cliente.
+
+---
+
+## D012 — SaaS: OAuth Google por cliente
+**Data:** 2026-05-08
+**Decisão:** Cada cliente autentica a sua própria Google Drive via OAuth user token.
+**Razão:** Elimina dependência de Service Account partilhada; melhor controlo de acesso; standard para SaaS multi-tenant.

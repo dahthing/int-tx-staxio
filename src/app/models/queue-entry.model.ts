@@ -1,5 +1,5 @@
 export type ProcessingStatus = 'pending' | 'processing' | 'done' | 'error' | 'manual_review';
-export type DocType = 'received' | 'issued' | 'ecommerce' | 'bank_statement' | 'supplies' | 'international' | 'unknown';
+export type DocType = 'received' | 'issued' | 'invoice_issued' | 'receipt_issued' | 'quote_issued' | 'ecommerce' | 'bank_statement' | 'supplies' | 'international' | 'unknown';
 
 export interface QueueEntry {
   id: string;
@@ -24,4 +24,5 @@ export interface QueueEntry {
   attempts: number;
   created_at: string;
   updated_at: string;
+  is_my_doc: boolean | null;
 }

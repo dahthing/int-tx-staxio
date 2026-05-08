@@ -281,22 +281,38 @@
               <span role="columnheader">Tipo</span>
               <span role="columnheader">Keywords</span>
               <span role="columnheader">Estado</span>
+              <span role="columnheader">Acções</span>
             </div>
 
             @for (s of suppliers(); track s.id) {
               <div class="suppliers-table__row" [class.suppliers-table__row--inactive]="!s.active" role="row">
-              
-                <!-- Nome + badge auto -->
+
+                <!-- Nome editável inline + badge auto -->
                 <div class="suppliers-table__cell" role="cell">
-                  <span class="suppliers-table__name">{{ s.name }}</span>
+                  <input
+                    class="suppliers-table__input"
+                    type="text"
+                    [value]="s.name"
+                    #nameInput
+                    (blur)="saveSupplierName(s, nameInput.value)"
+                    [attr.aria-label]="'Nome de ' + s.name"
+                  />
                   @if (s.auto_detected) {
                     <span class="suppliers-table__auto-badge" title="Detectado automaticamente pela IA">IA</span>
                   }
                 </div>
 
-                <!-- NIF -->
+                <!-- NIF editável inline -->
                 <div class="suppliers-table__cell suppliers-table__cell--mono" role="cell">
-                  {{ s.nif ?? '—' }}
+                  <input
+                    class="suppliers-table__input suppliers-table__input--mono"
+                    type="text"
+                    [value]="s.nif ?? ''"
+                    #nifInput
+                    (blur)="saveSupplierNif(s, nifInput.value)"
+                    [attr.aria-label]="'NIF de ' + s.name"
+                    placeholder="—"
+                  />
                 </div>
 
                 <!-- Tipo (select inline) -->
@@ -332,14 +348,27 @@
                     [attr.aria-pressed]="s.active"
                   >
                     <span class="suppliers-table__toggle-knob"></span>
-                    </button>
+                  </button>
                   <span class="suppliers-table__toggle-label">{{ s.active ? 'Activo' : 'Inactivo' }}</span>
-                  </div>
-                  
-                  </div>
-                  }
-                  </div>
-                  }
+                </div>
+
+                <!-- Acções -->
+                <div class="suppliers-table__cell suppliers-table__cell--actions" role="cell">
+                  <button
+                    class="btn btn--icon btn--danger-ghost"
+                    type="button"
+                    (click)="deleteSupplier(s)"
+                    [attr.aria-label]="'Apagar ' + s.name"
+                    title="Apagar fornecedor"
+                  >
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                </div>
+
+              </div>
+            }
+          </div>
+        }
 
         @if (newSupplierVisible()) {
         <form class="settings__new-supplier" [formGroup]="newSupplierForm" (ngSubmit)="addSupplier()"

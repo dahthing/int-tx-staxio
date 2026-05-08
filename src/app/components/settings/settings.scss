@@ -268,7 +268,7 @@
 
   &__head {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 3fr 1fr;
+    grid-template-columns: 2fr 1fr 1fr 3fr 1fr 2.5rem;
     background: var(--stx-surface-2);
     border-bottom: 1px solid var(--stx-border);
     padding: 0.5rem 1rem;
@@ -284,7 +284,7 @@
 
   &__row {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 3fr 1fr;
+    grid-template-columns: 2fr 1fr 1fr 3fr 1fr 2.5rem;
     align-items: center;
     padding: 0.625rem 1rem;
     gap: 0.75rem;
@@ -296,7 +296,7 @@
 
     &--inactive {
       opacity: 0.5;
-      .suppliers-table__name { text-decoration: line-through; }
+      .suppliers-table__input { text-decoration: line-through; }
     }
 
     @media (max-width: 900px) {
@@ -314,6 +314,7 @@
     &--mono { font-family: 'Fira Code', monospace; color: var(--stx-text-muted); }
     &--keywords { flex: 1; }
     &--toggle { gap: 0.5rem; }
+    &--actions { justify-content: center; }
   }
 
   &__name {

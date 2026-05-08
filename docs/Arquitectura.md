@@ -106,3 +106,47 @@ GOOGLE_SERVICE_ACCOUNT_JSON
 DRIVE_INBOX_FOLDER_ID
 DRIVE_ROOT_FOLDER_ID
 ```
+
+---
+
+## Novos Componentes (Sessão 2026-05-08)
+
+### Edge Functions Adicionadas
+
+| Função | Descrição |
+|---|---|
+| `list-folders` | Lista subpastas do Drive para o tree-picker |
+| `move-existing` | Move ficheiro já processado para nova pasta |
+
+### Componentes Angular Adicionados
+
+| Componente | Descrição |
+|---|---|
+| `DriveFolderPicker` | Modal tree-picker para navegar pastas do Drive |
+| `DoneList` | Listagem de documentos `status=done` com opção de mover |
+
+### Serviços Adicionados
+
+| Serviço | Método principal |
+|---|---|
+| `DriveService` | `listFolders(parentId): Observable<DriveFolder[]>` |
+
+### Tabelas Adicionadas
+
+| Tabela | Descrição |
+|---|---|
+| `training_examples` | Exemplos de treino etiquetados pelo utilizador (few-shot, ver D009) |
+
+### Colunas Adicionadas
+
+| Tabela | Coluna | Tipo | Descrição |
+|---|---|---|---|
+| `processing_queue` | `is_my_doc` | `boolean` | Marca documentos emitidos pela própria empresa (NIF 514084235) |
+
+### Tipos `doc_type` Adicionados
+
+| Valor | Descrição |
+|---|---|
+| `invoice_issued` | Factura emitida pela empresa |
+| `receipt_issued` | Recibo emitido pela empresa |
+| `quote_issued` | Orçamento emitido pela empresa |

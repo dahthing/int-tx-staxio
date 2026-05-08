@@ -15,6 +15,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { QueueService } from '../../services/queue.service';
 import { QueueEntry, ProcessingStatus } from '../../models/queue-entry.model';
 import { SUPABASE_CLIENT } from '../../core/supabase.client';
+import { DriveFolderPicker } from '../drive-folder-picker/drive-folder-picker';
 
 @Component({
   selector: 'app-manual-review',
@@ -26,6 +27,7 @@ import { SUPABASE_CLIENT } from '../../core/supabase.client';
     MatIconModule,
     MatButtonModule,
     MatSnackBarModule,
+    DriveFolderPicker,
   ],
   templateUrl: './manual-review.html',
   styleUrl: './manual-review.scss',
@@ -44,6 +46,11 @@ export class ManualReview implements OnInit {
   readonly #expandedId = signal<string | null>(null);
   readonly expandedId = this.#expandedId.asReadonly();
 
+  readonly #pickerOpen = signal(false);
+  readonly pickerOpen = this.#pickerOpen.asReadonly();
+
+  readonly #rootFolderId = signal('');
+
   readonly previewUrl = computed<SafeResourceUrl | null>(() => {
     const id = this.#expandedId();
     if (!id) return null;
@@ -61,14 +68,19 @@ export class ManualReview implements OnInit {
     )
   );
 
+  readonly rootFolderId = this.#rootFolderId.asReadonly();
+
   readonly form = this.#fb.nonNullable.group({
-    supplier:      ['' as string | null],
-    doc_date:      ['' as string | null],
-    value:         [null as number | null],
-    nif:           ['' as string | null],
-    country:       ['' as string | null],
-    dest_path:     ['' as string | null, Validators.required],
-    dest_file_name:['' as string | null, Validators.required],
+    supplier:           ['' as string | null],
+    doc_date:           ['' as string | null],
+    value:              [null as number | null],
+    nif:                ['' as string | null],
+    country:            ['' as string | null],
+    dest_path:          ['' as string | null, Validators.required],
+    dest_file_name:     ['' as string | null, Validators.required],
+    dest_root_folder_id:['' as string | null],
+    is_my_doc:          [false],
+    my_doc_kind:        ['' as string],
   });
 
   readonly statusLabel: Record<ProcessingStatus, string> = {
@@ -83,6 +95,12 @@ export class ManualReview implements OnInit {
     if (this.#queue.entries().length === 0) {
       await this.#queue.loadAll();
     }
+    const { data } = await this.#supabase
+      .from('app_config')
+      .select('value')
+      .eq('key', 'drive_root_folder_id')
+      .single();
+    if (data?.value) this.#rootFolderId.set(data.value);
   }
 
   toggleExpand(entry: QueueEntry): void {
@@ -91,14 +109,18 @@ export class ManualReview implements OnInit {
       return;
     }
     this.#expandedId.set(entry.id);
+    const myDocTypes = ['invoice_issued', 'receipt_issued', 'quote_issued'];
     this.form.setValue({
-      supplier:      entry.supplier ?? '',
-      doc_date:      entry.doc_date ?? '',
-      value:         entry.value,
-      nif:           entry.nif ?? '',
-      country:       entry.country ?? '',
-      dest_path:     entry.dest_path ?? '',
-      dest_file_name:entry.dest_file_name ?? '',
+      supplier:           entry.supplier ?? '',
+      doc_date:           entry.doc_date ?? '',
+      value:              entry.value,
+      nif:                entry.nif ?? '',
+      country:            entry.country ?? '',
+      dest_path:          entry.dest_path ?? '',
+      dest_file_name:     entry.dest_file_name ?? '',
+      dest_root_folder_id:entry.dest_root_folder_id ?? '',
+      is_my_doc:          entry.is_my_doc ?? false,
+      my_doc_kind:        entry.doc_type && myDocTypes.includes(entry.doc_type) ? entry.doc_type : '',
     });
   }
 
@@ -107,17 +129,24 @@ export class ManualReview implements OnInit {
     this.#actionBusy.set(true);
 
     const raw = this.form.getRawValue();
-    const patch = {
-      supplier:      raw.supplier || null,
-      doc_date:      raw.doc_date || null,
-      value:         raw.value,
-      nif:           raw.nif || null,
-      country:       raw.country || null,
-      dest_path:     raw.dest_path || null,
-      dest_file_name:raw.dest_file_name || null,
-      status:        'pending' as ProcessingStatus,
-      error_message: null,
+    const isMyDoc = raw.is_my_doc === true;
+    const myDocKind = raw.my_doc_kind || null;
+    const docType = isMyDoc && myDocKind ? myDocKind : undefined;
+
+    const patch: Record<string, unknown> = {
+      supplier:           raw.supplier || null,
+      doc_date:           raw.doc_date || null,
+      value:              raw.value,
+      nif:                raw.nif || null,
+      country:            raw.country || null,
+      dest_path:          raw.dest_path || null,
+      dest_file_name:     raw.dest_file_name || null,
+      dest_root_folder_id:raw.dest_root_folder_id || null,
+      status:             'pending' as ProcessingStatus,
+      error_message:      null,
+      is_my_doc:          isMyDoc,
     };
+    if (docType) patch['doc_type'] = docType;
 
     const { error } = await this.#supabase
       .from('processing_queue')
@@ -134,6 +163,18 @@ export class ManualReview implements OnInit {
       queue_id: entry.id, file_id: entry.file_id, file_name: entry.file_name,
       action: 'manual_edit', status: 'success', metadata: patch,
     });
+
+    if (isMyDoc) {
+      await this.#supabase.from('training_examples').insert({
+        file_id:     entry.file_id,
+        file_name:   entry.file_name,
+        doc_type:    docType ?? entry.doc_type ?? 'invoice_issued',
+        is_my_doc:   true,
+        my_doc_kind: myDocKind,
+        supplier:    raw.supplier || null,
+        nif:         raw.nif || null,
+      });
+    }
 
     // Chama /move para este item específico
     this.#queue.triggerMove(entry.id).subscribe({
@@ -170,6 +211,22 @@ export class ManualReview implements OnInit {
       this.#toast('Documento ignorado', 'info');
     }
     this.#actionBusy.set(false);
+  }
+
+  openPicker(): void {
+    this.#pickerOpen.set(true);
+  }
+
+  onFolderSelected(event: { id: string; path: string }): void {
+    this.form.patchValue({
+      dest_path: event.path,
+      dest_root_folder_id: event.id,
+    });
+    this.#pickerOpen.set(false);
+  }
+
+  closePicker(): void {
+    this.#pickerOpen.set(false);
   }
 
   #toast(msg: string, type: 'success' | 'error' | 'info'): void {

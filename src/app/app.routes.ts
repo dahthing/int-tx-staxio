@@ -22,6 +22,11 @@ export const routes: Routes = [
           import('./components/manual-review/manual-review').then(m => m.ManualReview),
       },
       {
+        path: 'done',
+        loadComponent: () =>
+          import('./components/done-list/done-list').then(m => m.DoneList),
+      },
+      {
         path: 'settings',
         loadComponent: () =>
           import('./components/settings/settings').then(m => m.Settings),

@@ -105,15 +105,32 @@
                   </div>
 
                   <div class="field field--wide">
-                    <label class="field__label" for="dest_path-{{ entry.id }}">
-                      Caminho destino
+                    <label class="field__label">
+                      Pasta destino
                       @if (form.controls.dest_path.invalid && form.controls.dest_path.touched) {
                         <span class="field__error" role="alert">Obrigatório</span>
                       }
                     </label>
-                    <input id="dest_path-{{ entry.id }}" class="field__input"
-                      [class.field__input--invalid]="form.controls.dest_path.invalid && form.controls.dest_path.touched"
-                      type="text" formControlName="dest_path" placeholder="2025/Q1/JAN" />
+                    <div class="picker-trigger">
+                      <span
+                        class="picker-trigger__path"
+                        [class.picker-trigger__path--empty]="!form.controls.dest_path.value"
+                        [class.picker-trigger__path--invalid]="form.controls.dest_path.invalid && form.controls.dest_path.touched"
+                        aria-live="polite"
+                      >
+                        {{ form.controls.dest_path.value || 'Nenhuma pasta selecionada' }}
+                      </span>
+                      <button
+                        type="button"
+                        class="btn btn--ghost btn--sm"
+                        (click)="openPicker()"
+                        [disabled]="!rootFolderId()"
+                        aria-label="Escolher pasta de destino"
+                      >
+                        <mat-icon>folder_open</mat-icon>
+                        Escolher
+                      </button>
+                    </div>
                   </div>
 
                   <div class="field field--wide">
@@ -128,6 +145,35 @@
                       type="text" formControlName="dest_file_name"
                       placeholder="2025-01-15_fornecedor_150.00.pdf" />
                   </div>
+
+                  <div class="field field--wide">
+                    <label class="field__label field__label--toggle" for="is_my_doc-{{ entry.id }}">
+                      <input
+                        id="is_my_doc-{{ entry.id }}"
+                        type="checkbox"
+                        class="field__checkbox"
+                        formControlName="is_my_doc"
+                      />
+                      É documento emitido por mim
+                    </label>
+                  </div>
+
+                  @if (form.controls.is_my_doc.value) {
+                    <div class="field field--wide">
+                      <label class="field__label" for="my_doc_kind-{{ entry.id }}">Tipo de documento emitido</label>
+                      <select
+                        id="my_doc_kind-{{ entry.id }}"
+                        class="field__input"
+                        formControlName="my_doc_kind"
+                        aria-required="true"
+                      >
+                        <option value="">Selecionar…</option>
+                        <option value="invoice_issued">Fatura emitida</option>
+                        <option value="receipt_issued">Recibo</option>
+                        <option value="quote_issued">Orçamento</option>
+                      </select>
+                    </div>
+                  }
                 </div>
 
                 <div class="review__form-actions">
@@ -171,3 +217,11 @@
     }
   </div>
 </div>
+
+@if (pickerOpen() && rootFolderId()) {
+  <app-drive-folder-picker
+    [rootFolderId]="rootFolderId()"
+    (selected)="onFolderSelected($event)"
+    (cancelled)="closePicker()"
+  />
+}

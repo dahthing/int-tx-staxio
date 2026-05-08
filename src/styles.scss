@@ -78,6 +78,13 @@ html, body {
     &:hover:not(:disabled) { background: color-mix(in srgb, var(--stx-error) 10%, transparent); }
   }
   &--sm { padding: 0.25rem 0.625rem; font-size: 0.8125rem; }
+  &--icon { padding: 0.25rem; width: 2rem; height: 2rem; justify-content: center; }
+  &--danger-ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--stx-text-muted);
+    &:hover:not(:disabled) { background: color-mix(in srgb, var(--stx-error) 10%, transparent); color: var(--stx-error); border-color: transparent; }
+  }
 }
 
 // ============================================================

@@ -1,0 +1,50 @@
+<div class="picker__backdrop" (click)="cancel()"></div>
+
+<div class="picker__card" role="document">
+  <div class="picker__header">
+    <nav class="picker__breadcrumb" aria-label="Navegação de pastas">
+      <button class="picker__crumb" type="button" (click)="navigateToRoot()">Drive</button>
+      @for (crumb of stack(); track crumb.id; let i = $index) {
+        <mat-icon class="picker__crumb-sep">chevron_right</mat-icon>
+        <button class="picker__crumb" type="button" (click)="navigateTo(i)">{{ crumb.name }}</button>
+      }
+    </nav>
+  </div>
+
+  <div class="picker__list-wrap">
+    @if (loading()) {
+      <div class="picker__loading" role="status" aria-label="A carregar pastas">
+        <div class="picker__spinner"></div>
+      </div>
+    } @else if (children().length === 0) {
+      <p class="picker__empty">Sem subpastas</p>
+    } @else {
+      <ul class="picker__list" role="list">
+        @for (folder of children(); track folder.id) {
+          <li>
+            <button
+              class="picker__folder"
+              type="button"
+              (click)="navigateInto(folder)"
+              [attr.aria-label]="'Navegar para ' + folder.name"
+            >
+              <mat-icon class="picker__folder-icon">folder</mat-icon>
+              <span class="picker__folder-name">{{ folder.name }}</span>
+              @if (folder.hasChildren) {
+                <mat-icon class="picker__folder-chevron">chevron_right</mat-icon>
+              }
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+
+  <div class="picker__actions">
+    <button class="btn btn--ghost btn--sm" type="button" (click)="cancel()">Cancelar</button>
+    <button class="btn btn--primary btn--sm" type="button" (click)="confirm()">
+      <mat-icon>check</mat-icon>
+      Selecionar esta pasta
+    </button>
+  </div>
+</div>

@@ -239,6 +239,50 @@
     color: var(--stx-error);
     margin-left: auto;
   }
+
+  &__label--toggle {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--stx-text);
+    font-weight: 500;
+    user-select: none;
+  }
+
+  &__checkbox {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--stx-primary);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+}
+
+// ============================================================
+// PICKER TRIGGER
+// ============================================================
+.picker-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--stx-bg);
+  border: 1px solid var(--stx-border);
+  border-radius: 6px;
+  padding: 0.375rem 0.5rem 0.375rem 0.75rem;
+
+  &__path {
+    flex: 1;
+    font-size: 0.875rem;
+    color: var(--stx-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &--empty { color: var(--stx-text-muted); }
+    &--invalid { color: var(--stx-error); }
+  }
 }
 
 // ============================================================

@@ -4,6 +4,9 @@
 export type DocType =
   | 'received'
   | 'issued'
+  | 'invoice_issued'
+  | 'receipt_issued'
+  | 'quote_issued'
   | 'ecommerce'
   | 'bank_statement'
   | 'supplies'
@@ -109,6 +112,7 @@ export function classifyDocument(input: ClassifyInput): DocType {
 
   // Emitido por nós — sinal determinístico, ignora confiança
   if (issuerNif === companyNif) return 'issued';
+  if (nif === companyNif) return 'issued';
 
   // Moeda não-EUR → internacional — sinal determinístico
   if (currency && currency.toUpperCase() !== 'EUR') return 'international';
@@ -160,8 +164,23 @@ export function buildDestPath(
 
   switch (docType) {
     case 'issued':
+    case 'invoice_issued':
       return {
         path: `${year}/Faturas Vendas/${monthLabel}`,
+        rootFolderId: getFolder('root')?.folder_id ?? null,
+        needsCreate: true
+      };
+
+    case 'receipt_issued':
+      return {
+        path: `${year}/Recibos Emitidos/${monthLabel}`,
+        rootFolderId: getFolder('root')?.folder_id ?? null,
+        needsCreate: true
+      };
+
+    case 'quote_issued':
+      return {
+        path: `${year}/Orçamentos/${monthLabel}`,
         rootFolderId: getFolder('root')?.folder_id ?? null,
         needsCreate: true
       };
@@ -292,6 +311,8 @@ export interface ClaudeMeta {
   country: string | null;
   currency: string | null;
   confidence: number;
+  is_my_doc?: boolean;
+  my_doc_kind?: string | null;
 }
 
 export interface QueuePayload {
@@ -313,6 +334,17 @@ export interface QueuePayload {
   dest_year: number | null;
   dest_quarter: number | null;
   dest_month: string | null;
+  is_my_doc: boolean;
+}
+
+const MY_DOC_RECEIPT_KEYWORDS = ['recibo'];
+const MY_DOC_QUOTE_KEYWORDS = ['orçamento', 'orcamento', 'quote'];
+
+function resolveMyDocKind(supplier: string | null, rawText?: string): 'invoice_issued' | 'receipt_issued' | 'quote_issued' {
+  const haystack = [supplier ?? '', rawText ?? ''].join(' ').toLowerCase();
+  if (MY_DOC_RECEIPT_KEYWORDS.some(kw => haystack.includes(kw))) return 'receipt_issued';
+  if (MY_DOC_QUOTE_KEYWORDS.some(kw => haystack.includes(kw))) return 'quote_issued';
+  return 'invoice_issued';
 }
 
 export function buildQueuePayload(
@@ -325,16 +357,26 @@ export function buildQueuePayload(
 ): QueuePayload {
   const nif = meta.nif ?? extractNif(meta.supplier ?? '');
 
-  const docType = classifyDocument({
-    nif,
-    country: meta.country,
-    currency: meta.currency ?? 'EUR',
-    supplier: meta.supplier,
-    issuerNif: meta.issuerNif,
-    companyNif,
-    suppliers,
-    confidence: meta.confidence,
-  });
+  const isMyDoc = meta.issuerNif === companyNif || nif === companyNif || meta.is_my_doc === true;
+  const myDocKind: 'invoice_issued' | 'receipt_issued' | 'quote_issued' | null = isMyDoc
+    ? (meta.my_doc_kind as 'invoice_issued' | 'receipt_issued' | 'quote_issued' | null) ?? resolveMyDocKind(meta.supplier, file.name)
+    : null;
+
+  let docType: DocType;
+  if (isMyDoc && myDocKind) {
+    docType = myDocKind;
+  } else {
+    docType = classifyDocument({
+      nif,
+      country: meta.country,
+      currency: meta.currency ?? 'EUR',
+      supplier: meta.supplier,
+      issuerNif: meta.issuerNif,
+      companyNif,
+      suppliers,
+      confidence: meta.confidence,
+    });
+  }
 
   const parsedDate = meta.doc_date ? parseDocDate(meta.doc_date) : null;
   const year = parsedDate?.year ?? new Date().getFullYear();
@@ -373,5 +415,6 @@ export function buildQueuePayload(
     dest_year: parsedDate?.year ?? null,
     dest_quarter: parsedDate ? quarter : null,
     dest_month: parsedDate ? resolveMonthPT(month) : null,
+    is_my_doc: isMyDoc,
   };
 }

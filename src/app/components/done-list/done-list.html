@@ -1,0 +1,84 @@
+@if (pickerEntry() && rootFolderId()) {
+  <app-drive-folder-picker
+    [rootFolderId]="rootFolderId()"
+    (selected)="onFolderSelected($event)"
+    (cancelled)="onPickerCancelled()"
+  />
+}
+
+<div class="done-list">
+  <header class="done-list__header">
+    <h1 class="done-list__title">Documentos Tratados</h1>
+    <span class="done-list__count">
+      {{ filteredEntries().length }} de {{ entries().length }}
+    </span>
+  </header>
+
+  <div class="done-list__filters">
+    <input
+      class="done-list__filter-input"
+      type="text"
+      placeholder="Filtrar por fornecedor…"
+      [ngModel]="filterSupplier()"
+      (ngModelChange)="setSupplierFilter($event)"
+      aria-label="Filtrar por fornecedor"
+    />
+    <input
+      class="done-list__filter-input"
+      type="month"
+      [ngModel]="filterMonth()"
+      (ngModelChange)="setMonthFilter($event)"
+      aria-label="Filtrar por mês"
+    />
+  </div>
+
+  @if (loading()) {
+    <ul class="done-list__items" aria-busy="true" aria-label="A carregar documentos">
+      @for (_ of [1, 2, 3]; track $index) {
+        <li class="done-list__skeleton" aria-hidden="true"></li>
+      }
+    </ul>
+  } @else if (filteredEntries().length === 0) {
+    <div class="done-list__empty" role="status">
+      <mat-icon class="done-list__empty-icon">inbox</mat-icon>
+      <p>Nenhum documento encontrado.</p>
+    </div>
+  } @else {
+    <ul class="done-list__items" role="list">
+      @for (entry of filteredEntries(); track entry.id) {
+        <li class="done-list__item">
+          <span class="done-list__col done-list__col--name" [title]="entry.file_name">
+            {{ entry.file_name }}
+          </span>
+          <span class="done-list__col done-list__col--supplier">
+            {{ entry.supplier ?? '—' }}
+          </span>
+          <span class="done-list__col done-list__col--date">
+            {{ entry.doc_date ? (entry.doc_date | date:'dd/MM/yyyy') : '—' }}
+          </span>
+          <span class="done-list__col done-list__col--value">
+            @if (entry.value !== null) {
+              {{ entry.value | number:'1.2-2' }} {{ entry.currency }}
+            } @else {
+              —
+            }
+          </span>
+          <span class="done-list__col done-list__col--path" [title]="entry.dest_path ?? ''">
+            {{ entry.dest_path ?? '—' }}
+          </span>
+          <span class="done-list__badge" aria-label="Estado: tratado">tratado</span>
+          <button
+            mat-icon-button
+            class="done-list__action"
+            [disabled]="movingId() === entry.id"
+            (click)="onMoveFolder(entry)"
+            matTooltip="Mudar pasta"
+            aria-label="Mudar pasta do ficheiro"
+          >
+            <mat-icon>drive_file_move</mat-icon>
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</div>

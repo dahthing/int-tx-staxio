@@ -117,16 +117,42 @@ async function downloadFileBase64(token: string, fileId: string): Promise<string
 // ============================================================
 // CLAUDE VISION: extrai metadados do PDF
 // ============================================================
-async function extractMetadata(client: Anthropic, pdfBase64: string) {
+async function extractMetadata(
+  client: Anthropic,
+  pdfBase64: string,
+  supabase: ReturnType<typeof createClient>,
+) {
+  const { data: examples } = await supabase
+    .from('training_examples')
+    .select('supplier, nif, doc_type, is_my_doc, my_doc_kind')
+    .order('created_at', { ascending: false })
+    .limit(8);
+
+  let fewShotText = '';
+  if (examples && examples.length > 0) {
+    const lines = examples.map((ex: { supplier: string | null; nif: string | null; doc_type: string; is_my_doc: boolean; my_doc_kind: string | null }) => {
+      const kind = ex.my_doc_kind ?? ex.doc_type;
+      return `- Supplier "${ex.supplier ?? '?'}", NIF "${ex.nif ?? '?'}" → doc_type: ${kind}, is_my_doc: ${ex.is_my_doc}`;
+    });
+    fewShotText = `\nExemplos de classificações anteriores (aprende com estes):\n${lines.join('\n')}\n`;
+  }
+
   const response = await client.messages.create({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 1024,
+    system: [
+      {
+        type: 'text',
+        text: `És um sistema de classificação de documentos fiscais. Extrais metadados de documentos PDF em JSON.${fewShotText}`,
+        cache_control: { type: 'ephemeral' },
+      },
+    ],
     messages: [{
       role: 'user',
       content: [
         {
           type: 'document',
-          source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 }
+          source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 },
         },
         {
           type: 'text',
@@ -141,11 +167,13 @@ Formato exacto:
   "nif": "NIF/VAT do emitente ou null",
   "country": "país do emitente em inglês ou null",
   "currency": "código ISO 4217 (EUR, USD, etc.) ou EUR se não indicado",
-  "confidence": número entre 0 e 1 indicando a tua confiança na extracção
-}`
-        }
-      ]
-    }]
+  "confidence": número entre 0 e 1 indicando a tua confiança na extracção,
+  "is_my_doc": true se este documento foi EMITIDO pela nossa empresa (NIF 514084235 aparece como emitente), false caso contrário,
+  "my_doc_kind": "invoice_issued" | "receipt_issued" | "quote_issued" | null (apenas quando is_my_doc=true)
+}`,
+        },
+      ],
+    }],
   });
 
   const text = response.content[0].type === 'text' ? response.content[0].text : '{}';
@@ -153,7 +181,7 @@ Formato exacto:
   try {
     return JSON.parse(text);
   } catch {
-    return { doc_date: null, supplier: null, value: null, nif: null, country: null, currency: 'EUR' };
+    return { doc_date: null, supplier: null, value: null, nif: null, country: null, currency: 'EUR', is_my_doc: false, my_doc_kind: null };
   }
 }
 
@@ -227,7 +255,7 @@ Deno.serve(async (req) => {
       try {
         // Download e extracção
         const pdfBase64 = await downloadFileBase64(driveToken, file.id);
-        const rawMeta = await extractMetadata(anthropic, pdfBase64);
+        const rawMeta = await extractMetadata(anthropic, pdfBase64, supabase);
 
         const meta: ClaudeMeta = {
           doc_date: rawMeta.doc_date ?? null,
@@ -238,6 +266,8 @@ Deno.serve(async (req) => {
           country: rawMeta.country ?? null,
           currency: rawMeta.currency ?? 'EUR',
           confidence: typeof rawMeta.confidence === 'number' ? rawMeta.confidence : 0.8,
+          is_my_doc: rawMeta.is_my_doc === true,
+          my_doc_kind: rawMeta.my_doc_kind ?? null,
         };
 
         const payload = buildQueuePayload(file, inboxFolderId, meta, suppliers, folderConfig, companyNif);

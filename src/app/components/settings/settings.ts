@@ -161,6 +161,45 @@ export class Settings implements OnInit {
     );
   }
 
+  async saveSupplierName(supplier: Supplier, name: string): Promise<void> {
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === supplier.name) return;
+    const { error } = await this.#supabase
+      .from('suppliers')
+      .update({ name: trimmed })
+      .eq('id', supplier.id);
+    if (error) { this.#toast(error.message, 'error'); return; }
+    this.#suppliers.update(list =>
+      list.map(s => s.id === supplier.id ? { ...s, name: trimmed } : s)
+    );
+    this.#toast('Nome actualizado', 'success');
+  }
+
+  async saveSupplierNif(supplier: Supplier, nif: string): Promise<void> {
+    const trimmed = nif.trim() || null;
+    if (trimmed === supplier.nif) return;
+    const { error } = await this.#supabase
+      .from('suppliers')
+      .update({ nif: trimmed })
+      .eq('id', supplier.id);
+    if (error) { this.#toast(error.message, 'error'); return; }
+    this.#suppliers.update(list =>
+      list.map(s => s.id === supplier.id ? { ...s, nif: trimmed } : s)
+    );
+    this.#toast('NIF actualizado', 'success');
+  }
+
+  async deleteSupplier(supplier: Supplier): Promise<void> {
+    if (!confirm(`Apagar fornecedor "${supplier.name}"? Esta acção não pode ser desfeita.`)) return;
+    const { error } = await this.#supabase
+      .from('suppliers')
+      .delete()
+      .eq('id', supplier.id);
+    if (error) { this.#toast(error.message, 'error'); return; }
+    this.#suppliers.update(list => list.filter(s => s.id !== supplier.id));
+    this.#toast(`Fornecedor "${supplier.name}" apagado`, 'success');
+  }
+
   showNewSupplierForm(): void {
     this.newSupplierForm.reset({ name: '', nif: '', keywords: '', type: 'normal' });
     this.#newSupplierVisible.set(true);

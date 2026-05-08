@@ -58,6 +58,7 @@ export class Shell implements OnInit {
   readonly navItems: NavItem[] = [
     { label: 'Dashboard', icon: 'dashboard',  route: '/' },
     { label: 'Revisão',   icon: 'rate_review', route: '/review' },
+    { label: 'Tratados',  icon: 'task_alt',    route: '/done' },
     { label: 'Definições',icon: 'settings',    route: '/settings' },
   ];
 
