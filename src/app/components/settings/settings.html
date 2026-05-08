@@ -265,6 +265,7 @@
         </div>
 
         <!-- Provider + email + secret -->
+        <div [formGroup]="form">
         <div class="settings__fields settings__fields--inbound">
           <div class="field">
             <label class="field__label" for="inbound_provider">Provedor</label>
@@ -291,6 +292,7 @@
               placeholder="Deixa em branco para não alterar" autocomplete="new-password" />
             <p class="field__hint">Segredo do webhook do provedor. Guardado de forma segura — nunca exposto em claro.</p>
           </div>
+        </div>
         </div>
 
         <!-- Docs accordion -->

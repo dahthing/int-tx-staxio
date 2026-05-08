@@ -36,6 +36,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/settings/settings').then(m => m.Settings),
       },
+      {
+        path: 'budget',
+        loadComponent: () =>
+          import('./components/budget/budget').then(m => m.Budget),
+      },
+      {
+        path: 'insights',
+        loadComponent: () =>
+          import('./components/insights/insights').then(m => m.Insights),
+      },
     ],
   },
 ];
