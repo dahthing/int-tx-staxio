@@ -25,6 +25,13 @@
     </div>
   </div>
 
+  @if (!hasBankData()) {
+    <div class="finance-widget__no-bank" role="status">
+      <mat-icon>account_balance</mat-icon>
+      <span>Importa um extrato bancário para activar a reconciliação e ver saldos reais.</span>
+    </div>
+  }
+
   <!-- Alerts -->
   <div class="finance-widget__alerts" aria-label="Alertas">
     @if (!hasAlerts()) {

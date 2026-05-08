@@ -22,8 +22,10 @@ export class FinanceWidget {
   readonly unpaidInvoicesTotal = this.#bank.unpaidInvoicesTotal;
   readonly unreconciledDebits = this.#bank.unreconciledDebits;
   readonly duplicateSuspects = this.#stats.duplicateSuspects;
+  readonly hasBankData = this.#bank.hasBankData;
 
   readonly overdueUnpaid = computed(() => {
+    if (!this.hasBankData()) return [];
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const cutoff = thirtyDaysAgo.toISOString().slice(0, 10);

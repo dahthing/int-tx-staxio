@@ -29,16 +29,22 @@ export class BankService implements OnDestroy {
     this.#unreconciledDebits().reduce((s, t) => s + Math.abs(t.amount), 0)
   );
 
-  readonly unpaidInvoicesTotal = computed(() =>
-    this.#queue.entries()
-      .filter(e => e.is_paid === false && e.status === 'done' && e.is_my_doc === false)
-      .reduce((s, e) => s + (e.value ?? 0), 0)
+  readonly hasBankData = computed(() =>
+    this.#lastBalance() !== null || this.#unreconciledDebits().length > 0
   );
+
+  readonly unpaidInvoicesTotal = computed((): number | null => {
+    if (!this.hasBankData()) return null;
+    return this.#queue.entries()
+      .filter(e => e.is_paid === false && e.status === 'done' && e.is_my_doc === false)
+      .reduce((s, e) => s + (e.value ?? 0), 0);
+  });
 
   readonly projectedBalance = computed(() => {
     const bal = this.#lastBalance();
-    if (bal === null) return null;
-    return bal - this.unpaidInvoicesTotal();
+    const unpaid = this.unpaidInvoicesTotal();
+    if (bal === null || unpaid === null) return null;
+    return bal - unpaid;
   });
 
   #channel: RealtimeChannel | null = null;
