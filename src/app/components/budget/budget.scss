@@ -510,6 +510,9 @@
     font-size: 0.875rem;
   }
 
+  &__th--sortable { cursor: pointer; user-select: none; &:hover { color: var(--stx-text); } }
+  &__sort-icon { font-size: 0.8rem !important; height: 0.8rem !important; width: 0.8rem !important; vertical-align: middle; opacity: 0.6; margin-left: 0.2rem; }
+
   &__row--revenue td:first-child { border-left: 3px solid var(--stx-primary); }
   &__row--cost    td:first-child { border-left: 3px solid var(--budget-red); }
   &__row--people  td:first-child { border-left: 3px solid var(--budget-amber); }
@@ -843,6 +846,15 @@
 
     &--positive { color: var(--budget-green) !important; }
     &--negative { color: var(--budget-red) !important; }
+  }
+
+  &__sort-btn {
+    align-items: center; background: none; border: 1px solid var(--stx-border); border-radius: 4px;
+    color: var(--stx-text-muted); cursor: pointer; display: inline-flex; font-size: 0.7rem;
+    font-weight: 600; gap: 0.2rem; margin-left: 0.75rem; padding: 0.15rem 0.4rem;
+    transition: all 0.15s; vertical-align: middle;
+    mat-icon { font-size: 0.85rem; height: 0.85rem; width: 0.85rem; }
+    &:hover { background: var(--stx-bg); color: var(--stx-text); border-color: var(--stx-primary); }
   }
 
   &__actions {

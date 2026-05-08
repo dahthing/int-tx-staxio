@@ -6,7 +6,6 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -53,7 +52,7 @@ const MAP_SECTIONS: { key: MapSection; label: string; addLabel: string }[] = [
 
 @Component({
   selector: 'app-budget',
-  imports: [MatIconModule, MatButtonModule, MatSnackBarModule, DecimalPipe],
+  imports: [MatIconModule, MatButtonModule, MatSnackBarModule],
   templateUrl: './budget.html',
   styleUrl: './budget.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -84,8 +83,11 @@ export class Budget implements OnInit {
   readonly editingCell = this.#editingCell.asReadonly();
   readonly addingRow = this.#addingRow.asReadonly();
 
-  // ── overview: section filter ──────────────────────────────────────────────
+  // ── overview: section filter + sort ─────────────────────────────────────
   readonly sectionFilter = signal<string>('all');
+  readonly sortCol = signal<'name' | 'total'>('name');
+  readonly sortDir = signal<'asc' | 'desc'>('asc');
+  readonly mapSortDir = signal<'asc' | 'desc'>('asc');
 
   readonly sectionFilters = [
     { key: 'all',     label: 'Todos'    },
@@ -139,10 +141,17 @@ export class Budget implements OnInit {
   });
 
   readonly rowsBySection = computed(() => {
+    const dir = this.mapSortDir();
     const result: Partial<Record<MapSection, BudgetRow[]>> = {};
     for (const row of this.mapRows()) {
       if (!result[row.section]) result[row.section] = [];
       result[row.section]!.push(row);
+    }
+    for (const key of Object.keys(result) as MapSection[]) {
+      result[key]!.sort((a, b) => {
+        const cmp = a.category.localeCompare(b.category, 'pt');
+        return dir === 'asc' ? cmp : -cmp;
+      });
     }
     return result;
   });
@@ -226,13 +235,23 @@ export class Budget implements OnInit {
   // ── overview breakdown ───────────────────────────────────────────────────
   readonly filteredBreakdownRows = computed((): BreakdownRow[] => {
     const filter = this.sectionFilter();
-    return this.mapRows()
+    const col = this.sortCol();
+    const dir = this.sortDir();
+
+    const rows = this.mapRows()
       .filter(r => filter === 'all' || r.section === filter)
       .map(r => ({
         ...r,
         monthValues: Array.from({ length: 12 }, (_, i) => r.months[i + 1]?.value ?? 0),
         total: Object.values(r.months).reduce((s, m) => s + m.value, 0),
       }));
+
+    return rows.sort((a, b) => {
+      const cmp = col === 'name'
+        ? a.category.localeCompare(b.category, 'pt')
+        : a.total - b.total;
+      return dir === 'asc' ? cmp : -cmp;
+    });
   });
 
   // ── lifecycle ─────────────────────────────────────────────────────────────
@@ -325,9 +344,39 @@ export class Budget implements OnInit {
     return new Intl.NumberFormat('pt-PT', {
       style: 'currency',
       currency: 'EUR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  }
+
+  formatNum(value: number): string {
+    if (!value) return '';
+    return new Intl.NumberFormat('pt-PT', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value) + ' €';
+  }
+
+  formatNetMonth(value: number): string {
+    const abs = new Intl.NumberFormat('pt-PT', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(value);
+    }).format(Math.abs(value));
+    return (value >= 0 ? '+' : '−') + abs;
+  }
+
+  // ── sort ──────────────────────────────────────────────────────────────────
+  toggleBreakdownSort(col: 'name' | 'total'): void {
+    if (this.sortCol() === col) {
+      this.sortDir.update(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      this.sortCol.set(col);
+      this.sortDir.set('asc');
+    }
+  }
+
+  toggleMapSort(): void {
+    this.mapSortDir.update(d => d === 'asc' ? 'desc' : 'asc');
   }
 
   // ── map methods ───────────────────────────────────────────────────────────

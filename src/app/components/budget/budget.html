@@ -122,7 +122,7 @@
           >
             <span class="budget-kpi__label">Resultado Líquido</span>
             <span class="budget-kpi__value budget-kpi__value--hero">{{ formatCurrency(resultadoLiquido()) }}</span>
-            <span class="budget-kpi__sub">margem {{ margem() | number:'1.1-1' }}%</span>
+            <span class="budget-kpi__sub">margem {{ margem().toFixed(1) }}%</span>
           </div>
         </div>
 
@@ -144,7 +144,7 @@
                 </div>
                 <span class="budget-monthly__label">{{ monthLabels[i] }}</span>
                 <span class="budget-monthly__val" [class.budget-monthly__val--neg]="val < 0">
-                  {{ val >= 0 ? '+' : '' }}{{ (val / 1000) | number:'1.0-1' }}k
+                  {{ formatNetMonth(val) }}
                 </span>
               </div>
             }
@@ -170,12 +170,22 @@
             <table class="budget-breakdown__table" aria-label="Detalhe por categoria">
               <thead>
                 <tr>
-                  <th scope="col">Categoria</th>
+                  <th scope="col" class="budget-breakdown__th--sortable" (click)="toggleBreakdownSort('name')">
+                    Categoria
+                    <mat-icon class="budget-breakdown__sort-icon">
+                      {{ sortCol() === 'name' ? (sortDir() === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more' }}
+                    </mat-icon>
+                  </th>
                   <th scope="col">Owner</th>
                   @for (ml of monthLabels; track ml) {
                     <th scope="col">{{ ml }}</th>
                   }
-                  <th scope="col">Total</th>
+                  <th scope="col" class="budget-breakdown__th--sortable" (click)="toggleBreakdownSort('total')">
+                    Total
+                    <mat-icon class="budget-breakdown__sort-icon">
+                      {{ sortCol() === 'total' ? (sortDir() === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more' }}
+                    </mat-icon>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -189,9 +199,9 @@
                     <td class="budget-breakdown__cat">{{ row.category }}</td>
                     <td class="budget-breakdown__owner">{{ row.owner ?? '—' }}</td>
                     @for (v of row.monthValues; track $index) {
-                      <td class="budget-breakdown__num">{{ v > 0 ? (v | number:'1.0-0') : '' }}</td>
+                      <td class="budget-breakdown__num">{{ formatNum(v) }}</td>
                     }
-                    <td class="budget-breakdown__total">{{ row.total | number:'1.0-0' }}</td>
+                    <td class="budget-breakdown__total">{{ formatNum(row.total) }}</td>
                   </tr>
                 }
                 @if (filteredBreakdownRows().length === 0) {
@@ -243,7 +253,14 @@
               <tbody>
                 @for (section of mapSections; track section.key) {
                   <tr class="budget-map__section-header">
-                    <td [attr.colspan]="15">{{ section.label }}</td>
+                    <td [attr.colspan]="15">
+                      {{ section.label }}
+                      <button class="budget-map__sort-btn" type="button" (click)="toggleMapSort()"
+                        [attr.aria-label]="'Ordenar ' + section.label + ' por nome'">
+                        <mat-icon>{{ mapSortDir() === 'asc' ? 'sort' : 'sort' }}</mat-icon>
+                        {{ mapSortDir() === 'asc' ? 'A→Z' : 'Z→A' }}
+                      </button>
+                    </td>
                   </tr>
 
                   @for (row of rowsBySection()[section.key] ?? []; track row.category) {
@@ -269,7 +286,7 @@
                           } @else {
                             <span class="budget-map__value"
                                   [class.budget-map__value--zero]="!(row.months[m.n]?.value)">
-                              {{ row.months[m.n]?.value ? (row.months[m.n].value | number:'1.0-0') : '' }}
+                              {{ formatNum(row.months[m.n]?.value ?? 0) }}
                             </span>
                             <span
                               class="budget-map__dot"
@@ -284,7 +301,7 @@
                         </td>
                       }
 
-                      <td class="budget-map__cell--total">{{ rowTotal(row) | number:'1.0-0' }}</td>
+                      <td class="budget-map__cell--total">{{ formatNum(rowTotal(row)) }}</td>
 
                       <td class="budget-map__cell--actions">
                         <div class="budget-map__actions" role="group" [attr.aria-label]="'Acções para ' + row.category">
@@ -360,9 +377,9 @@
                   <tr class="budget-map__subtotal">
                     <td>Subtotal</td>
                     @for (m of months; track m.n) {
-                      <td>{{ (subtotals()[section.key]?.[m.n] ?? 0) | number:'1.0-0' }}</td>
+                      <td>{{ formatNum(subtotals()[section.key]?.[m.n] ?? 0) }}</td>
                     }
-                    <td>{{ sectionTotal(section.key) | number:'1.0-0' }}</td>
+                    <td>{{ formatNum(sectionTotal(section.key)) }}</td>
                     <td></td>
                   </tr>
                 }
@@ -373,12 +390,12 @@
                     <td
                       [class.budget-map__result--positive]="netByMonth()[m.n] >= 0"
                       [class.budget-map__result--negative]="netByMonth()[m.n] < 0"
-                    >{{ netByMonth()[m.n] | number:'1.0-0' }}</td>
+                    >{{ formatNum(netByMonth()[m.n]) }}</td>
                   }
                   <td
                     [class.budget-map__result--positive]="netTotal() >= 0"
                     [class.budget-map__result--negative]="netTotal() < 0"
-                  >{{ netTotal() | number:'1.0-0' }}</td>
+                  >{{ formatNum(netTotal()) }}</td>
                   <td></td>
                 </tr>
               </tbody>

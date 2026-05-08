@@ -29,7 +29,12 @@ interface Budget2026Categories {
   variance: number;
 }
 
-const SECTION_AGGREGATES = new Set(['Impostos / Taxas', 'Pessoas']);
+// Maps section-header labels to their section key; rows matching these are skipped (they are subtotals)
+const SECTION_TRANSITIONS: Record<string, string> = {
+  'Custos': 'cost',
+  'Impostos / Taxas': 'tax',
+  'Pessoas': 'people',
+};
 
 function parseSheetYear(sheet: XLSX.WorkSheet, sheetName: string): number {
   const nameMatch = sheetName.match(/\d{4}/);
@@ -56,6 +61,7 @@ function parseSheet(sheet: XLSX.WorkSheet, year: number): ForecastRow[] {
   let categoryCol = 1;
   let ownerCol = 0;
   let currentSection = 'revenue';
+  let prevRowWasBlank = false; // guard: advance section only once per blank-row block
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i] as unknown[];
@@ -64,13 +70,13 @@ function parseSheet(sheet: XLSX.WorkSheet, year: number): ForecastRow[] {
       const c1 = row[1];
       const c2 = row[2];
       if (typeof c1 === 'string' && /^jan/i.test(c1)) {
-        // 2026-style: [Category, Jan, Fev, ..., Dez, TOTAL, ...]
+        // compact-style: [Category, Jan, Fev, ..., Dez, TOTAL, ...]
         monthOffset = 1;
         categoryCol = 0;
         ownerCol = -1;
         headerFound = true;
       } else if (typeof c2 === 'string' && /^jan/i.test(c2)) {
-        // 2025-style: [Owner, Category, Jan, Fev, ..., Dez, TOTAL, ...]
+        // extended-style: [Owner?, Category, Jan, Fev, ..., Dez, TOTAL, ...]
         monthOffset = 2;
         categoryCol = 1;
         ownerCol = 0;
@@ -82,29 +88,33 @@ function parseSheet(sheet: XLSX.WorkSheet, year: number): ForecastRow[] {
     const catRaw = row[categoryCol];
     const catStr = catRaw != null ? String(catRaw).trim() : '';
 
-    // Skip empty category rows
-    if (!catStr) continue;
+    // Blank rows: only advance section once per contiguous blank block (old 2025 subtotal detection)
+    if (!catStr) {
+      if (!prevRowWasBlank && monthOffset === 2 && row[0] == null && row[1] == null) {
+        const hasSubtotalValues = (row as unknown[])
+          .slice(monthOffset, monthOffset + MONTH_COUNT)
+          .some(v => typeof v === 'number' && (v as number) !== 0);
+        if (hasSubtotalValues) {
+          if (currentSection === 'revenue') currentSection = 'cost';
+          else if (currentSection === 'cost') currentSection = 'people';
+        }
+      }
+      prevRowWasBlank = true;
+      continue;
+    }
+    prevRowWasBlank = false;
 
     // Skip numeric categories (subtotal rows)
     if (typeof catRaw === 'number') continue;
 
-    // Detect section transitions based on known aggregate names
-    if (SECTION_AGGREGATES.has(catStr)) {
-      if (catStr === 'Impostos / Taxas') currentSection = 'tax';
-      else if (catStr === 'Pessoas') currentSection = 'people';
-      continue;
-    }
-
-    // For 2025: detect subtotal rows (col0=null, col1=null, numeric values)
-    if (monthOffset === 2 && row[0] == null && row[1] == null) {
-      // Subtotal row — advance section
-      if (currentSection === 'revenue') currentSection = 'cost';
-      else if (currentSection === 'cost') currentSection = 'people';
+    // Named section-header rows → transition and skip
+    if (catStr in SECTION_TRANSITIONS) {
+      currentSection = SECTION_TRANSITIONS[catStr];
       continue;
     }
 
     // Skip header label rows
-    if (catStr === 'Owner' || catStr === 'entrada') continue;
+    if (catStr === 'Owner' || catStr === 'entrada' || catStr === 'Receita') continue;
 
     const section = currentSection;
     const owner =
