@@ -72,6 +72,28 @@
     }
   }
 
+  &__clear-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    background: transparent;
+    color: var(--stx-error);
+    border: 1px solid color-mix(in srgb, var(--stx-error) 40%, transparent);
+    border-radius: var(--stx-radius);
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.5rem 0.875rem;
+    transition: background 0.15s, border-color 0.15s;
+
+    mat-icon { font-size: 18px; width: 18px; height: 18px; }
+
+    &:hover {
+      background: color-mix(in srgb, var(--stx-error) 10%, transparent);
+      border-color: var(--stx-error);
+    }
+  }
+
   &__upload-btn {
     display: inline-flex;
     align-items: center;

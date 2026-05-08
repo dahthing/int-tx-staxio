@@ -576,4 +576,19 @@ export class Budget implements OnInit {
   cellSaving(category: string, month: number): boolean {
     return this.#savingCell() === `${category}-${month}`;
   }
+
+  async clearYear(): Promise<void> {
+    const year = this.#selectedYear();
+    if (!confirm(`Apagar todos os dados de previsão de ${year}? Esta acção não pode ser desfeita.`)) return;
+    const { error } = await this.#supabase
+      .from('budget_forecasts')
+      .delete()
+      .eq('year', year);
+    if (error) {
+      this.#snackBar.open('Erro ao limpar previsão', 'Fechar', { duration: 3000 });
+      return;
+    }
+    this.#forecasts.set(this.#forecasts().filter(f => f.year !== year));
+    this.#snackBar.open(`Previsão ${year} apagada`, '✕', { duration: 3000 });
+  }
 }

@@ -23,6 +23,15 @@
         }
       </div>
 
+      <!-- Clear button — only shown when data exists for selected year -->
+      @if (hasForecastsForYear()) {
+        <button class="budget__clear-btn" type="button" (click)="clearYear()"
+          [attr.aria-label]="'Limpar previsão ' + selectedYear()">
+          <mat-icon>delete_sweep</mat-icon>
+          <span>Limpar {{ selectedYear() }}</span>
+        </button>
+      }
+
       <!-- Upload button -->
       <label class="budget__upload-btn" [class.budget__upload-btn--loading]="uploading()" aria-label="Importar Excel de previsão">
         @if (uploading()) {
