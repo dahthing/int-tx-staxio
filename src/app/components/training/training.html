@@ -1,0 +1,353 @@
+<div class="training">
+
+  <!-- ===== HEADER ===== -->
+  <header class="training__header">
+    <div class="training__header-left">
+      <h1 class="training__title">Treino do Modelo</h1>
+      <span class="training__count">{{ filteredExamples().length }} de {{ examples().length }} exemplos</span>
+    </div>
+    <button class="btn btn--primary btn--sm" type="button" (click)="showNewForm()">
+      <mat-icon>add</mat-icon>
+      Novo exemplo
+    </button>
+  </header>
+
+  <!-- ===== STATS ===== -->
+  <div class="training__stats">
+    <div class="training__stat-card">
+      <span class="training__stat-value">{{ stats().total }}</span>
+      <span class="training__stat-label">Total</span>
+    </div>
+    <div class="training__stat-card training__stat-card--mine">
+      <span class="training__stat-value">{{ stats().mine }}</span>
+      <span class="training__stat-label">Meus documentos</span>
+    </div>
+    <div class="training__stat-card training__stat-card--supplier">
+      <span class="training__stat-value">{{ stats().suppliers }}</span>
+      <span class="training__stat-label">Fornecedores</span>
+    </div>
+    @for (opt of docTypeOptions; track opt.value) {
+      @if (stats().byType[opt.value]) {
+        <div class="training__stat-card training__stat-card--type">
+          <span class="training__stat-value">{{ stats().byType[opt.value] }}</span>
+          <span class="training__stat-label">{{ opt.label }}</span>
+        </div>
+      }
+    }
+  </div>
+
+  <!-- ===== FILTERS ===== -->
+  <div class="training__filters">
+    <div class="training__filter-group" role="group" aria-label="Filtrar por origem">
+      <button
+        class="training__filter-btn"
+        [class.training__filter-btn--active]="filterMyDoc() === 'all'"
+        type="button"
+        (click)="setFilterMyDoc('all')"
+      >Todos</button>
+      <button
+        class="training__filter-btn training__filter-btn--mine"
+        [class.training__filter-btn--active]="filterMyDoc() === 'mine'"
+        type="button"
+        (click)="setFilterMyDoc('mine')"
+      >
+        <mat-icon>person</mat-icon>
+        Meus documentos
+      </button>
+      <button
+        class="training__filter-btn training__filter-btn--supplier"
+        [class.training__filter-btn--active]="filterMyDoc() === 'suppliers'"
+        type="button"
+        (click)="setFilterMyDoc('suppliers')"
+      >
+        <mat-icon>storefront</mat-icon>
+        Fornecedores
+      </button>
+    </div>
+
+    <select
+      class="training__filter-select"
+      [ngModel]="filterDocType()"
+      (ngModelChange)="setFilterDocType($event)"
+      aria-label="Filtrar por tipo de documento"
+    >
+      <option value="">Todos os tipos</option>
+      @for (opt of docTypeOptions; track opt.value) {
+        <option [value]="opt.value">{{ opt.label }}</option>
+      }
+    </select>
+  </div>
+
+  <!-- ===== FORMULÁRIO NOVO EXEMPLO ===== -->
+  @if (newFormVisible()) {
+    <form class="nef" [formGroup]="newForm" (ngSubmit)="addExample()" aria-label="Novo exemplo de treino">
+
+      <div class="nef__body">
+        <!-- LEFT: stepped form -->
+        <div class="nef__fields">
+
+          <div class="nef__step">
+            <span class="nef__step-num" aria-hidden="true">01</span>
+            <div class="nef__step-content">
+              <p class="nef__step-label">Origem do documento</p>
+              <div class="nef__seg" role="group" aria-label="Origem">
+                <button
+                  class="nef__seg-btn"
+                  [class.nef__seg-btn--active]="!newForm.controls.is_my_doc.value"
+                  type="button"
+                  (click)="setNewOrigin(false)"
+                >
+                  <mat-icon>storefront</mat-icon>
+                  Fornecedor
+                </button>
+                <button
+                  class="nef__seg-btn"
+                  [class.nef__seg-btn--active]="newForm.controls.is_my_doc.value"
+                  type="button"
+                  (click)="setNewOrigin(true)"
+                >
+                  <mat-icon>person</mat-icon>
+                  Meu documento
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="nef__step">
+            <span class="nef__step-num" aria-hidden="true">02</span>
+            <div class="nef__step-content">
+              <p class="nef__step-label">Tipo de documento</p>
+              <div class="nef__chips" role="group" aria-label="Tipo de documento">
+                @for (opt of docTypeOptions; track opt.value) {
+                  <button
+                    class="nef__chip"
+                    [class.nef__chip--active]="newForm.controls.doc_type.value === opt.value"
+                    [class.nef__chip--mine]="isMyDocType(opt.value)"
+                    type="button"
+                    (click)="setNewDocType(opt.value)"
+                    [attr.aria-pressed]="newForm.controls.doc_type.value === opt.value"
+                  >
+                    <mat-icon>{{ docTypeIcons[opt.value] }}</mat-icon>
+                    {{ opt.label }}
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="nef__step">
+            <span class="nef__step-num" aria-hidden="true">03</span>
+            <div class="nef__step-content">
+              <p class="nef__step-label">Identidade</p>
+              <div class="nef__identity-grid">
+                <div class="nef__field">
+                  <mat-icon class="nef__field-icon">storefront</mat-icon>
+                  <div class="nef__field-inner">
+                    <label class="nef__field-label" for="new-supplier">Fornecedor / Emitente <span aria-hidden="true">*</span></label>
+                    <input id="new-supplier" class="nef__field-input" formControlName="supplier" type="text"
+                      placeholder="NOS Comunicações, EDP…" autocomplete="off" />
+                  </div>
+                </div>
+                <div class="nef__field">
+                  <mat-icon class="nef__field-icon">tag</mat-icon>
+                  <div class="nef__field-inner">
+                    <label class="nef__field-label" for="new-nif">NIF / VAT</label>
+                    <input id="new-nif" class="nef__field-input" formControlName="nif" type="text"
+                      placeholder="514084235" autocomplete="off" inputmode="numeric" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="nef__step">
+            <span class="nef__step-num" aria-hidden="true">04</span>
+            <div class="nef__step-content">
+              <p class="nef__step-label">Contexto opcional</p>
+              <div class="nef__identity-grid">
+                <div class="nef__field">
+                  <mat-icon class="nef__field-icon">label</mat-icon>
+                  <div class="nef__field-inner">
+                    <label class="nef__field-label" for="new-label">Etiqueta</label>
+                    <input id="new-label" class="nef__field-input" formControlName="user_label" type="text"
+                      placeholder="fatura telefone…" autocomplete="off" />
+                  </div>
+                </div>
+                <div class="nef__field">
+                  <mat-icon class="nef__field-icon">notes</mat-icon>
+                  <div class="nef__field-inner">
+                    <label class="nef__field-label" for="new-notes">Notas</label>
+                    <input id="new-notes" class="nef__field-input" formControlName="notes" type="text"
+                      placeholder="contexto adicional…" autocomplete="off" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="nef__actions">
+            <button class="btn btn--primary btn--sm" type="submit" [disabled]="newForm.invalid">
+              <mat-icon>save</mat-icon> Guardar exemplo
+            </button>
+            <button class="btn btn--ghost btn--sm" type="button" (click)="cancelNew()">Cancelar</button>
+          </div>
+
+        </div>
+
+        <!-- RIGHT: live preview -->
+        <aside class="nef__preview" aria-label="Pré-visualização para o modelo">
+          <div class="nef__preview-header">
+            <mat-icon>model_training</mat-icon>
+            <span>Pré-visualização · Claude few-shot</span>
+          </div>
+          <div class="nef__preview-body">
+            <p class="nef__preview-comment"># Exemplos de classificação anteriores</p>
+            <p class="nef__preview-comment"># (injectados no prompt do modelo)</p>
+            <p class="nef__preview-line">{{ newFormPreview() }}</p>
+          </div>
+          <p class="nef__preview-hint">
+            Esta linha será usada pelo Claude para classificar documentos semelhantes no futuro.
+          </p>
+        </aside>
+      </div>
+
+    </form>
+  }
+
+  <!-- ===== LISTA DE EXEMPLOS ===== -->
+  @if (loading()) {
+    <div class="training__skeleton-list" aria-busy="true">
+      @for (_ of [1,2,3,4,5]; track $index) {
+        <div class="training__skeleton"></div>
+      }
+    </div>
+  } @else if (filteredExamples().length === 0) {
+    <div class="training__empty" role="status">
+      <mat-icon class="training__empty-icon">model_training</mat-icon>
+      <p>Nenhum exemplo de treino encontrado.</p>
+      <p class="training__empty-hint">
+        Adiciona exemplos manualmente ou aprova documentos na revisão manual com o toggle "É documento emitido por mim".
+      </p>
+    </div>
+  } @else {
+    <div class="training__table" role="table" aria-label="Exemplos de treino">
+
+      <div class="training__table-head" role="row">
+        <span role="columnheader">Fornecedor / Emitente</span>
+        <span role="columnheader">NIF</span>
+        <span role="columnheader">Tipo</span>
+        <span role="columnheader">Origem</span>
+        <span role="columnheader">Etiqueta</span>
+        <span role="columnheader">Data</span>
+        <span role="columnheader">Acções</span>
+      </div>
+
+      @for (ex of filteredExamples(); track ex.id) {
+        @if (editingId() === ex.id) {
+
+          <!-- LINHA EM EDIÇÃO -->
+          <form class="training__edit-row" [formGroup]="editForm" (ngSubmit)="saveEdit(ex)" role="row">
+            <div class="field" role="cell">
+              <input class="field__input field__input--sm" formControlName="supplier" type="text"
+                placeholder="Fornecedor" [attr.aria-label]="'Fornecedor de ' + ex.id" />
+            </div>
+            <div class="field" role="cell">
+              <input class="field__input field__input--sm" formControlName="nif" type="text"
+                placeholder="NIF" [attr.aria-label]="'NIF de ' + ex.id" />
+            </div>
+            <div role="cell">
+              <select class="training__inline-select" formControlName="doc_type" [attr.aria-label]="'Tipo de ' + ex.id">
+                @for (opt of docTypeOptions; track opt.value) {
+                  <option [value]="opt.value">{{ opt.label }}</option>
+                }
+              </select>
+            </div>
+            <div class="training__edit-my-doc" role="cell">
+              <label class="field__label--toggle">
+                <input class="field__checkbox" type="checkbox" formControlName="is_my_doc" aria-label="É meu documento" />
+                Meu
+              </label>
+              @if (editForm.controls.is_my_doc.value || isMyDocType(editForm.controls.doc_type.value)) {
+                <select class="training__inline-select" formControlName="my_doc_kind" aria-label="Tipo específico">
+                  <option value="">Auto</option>
+                  <option value="invoice_issued">Fatura</option>
+                  <option value="receipt_issued">Recibo</option>
+                  <option value="quote_issued">Orçamento</option>
+                </select>
+              }
+            </div>
+            <div class="field" role="cell">
+              <input class="field__input field__input--sm" formControlName="user_label" type="text"
+                placeholder="Etiqueta" [attr.aria-label]="'Etiqueta de ' + ex.id" />
+            </div>
+            <div role="cell" class="training__cell--date">
+              {{ ex.created_at | date:'dd/MM/yy' }}
+            </div>
+            <div class="training__row-actions" role="cell">
+              <button class="btn btn--primary btn--icon" type="submit" [disabled]="editForm.invalid"
+                aria-label="Guardar" title="Guardar">
+                <mat-icon>check</mat-icon>
+              </button>
+              <button class="btn btn--ghost btn--icon" type="button" (click)="cancelEdit()"
+                aria-label="Cancelar" title="Cancelar">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          </form>
+
+        } @else {
+
+          <!-- LINHA NORMAL -->
+          <div class="training__row" role="row"
+            [class.training__row--mine]="ex.is_my_doc"
+            [class.training__row--supplier]="!ex.is_my_doc"
+          >
+            <div class="training__cell training__cell--supplier" role="cell">
+              <span>{{ ex.supplier ?? '—' }}</span>
+              @if (ex.file_name) {
+                <span class="training__file-name" [title]="ex.file_name">{{ ex.file_name }}</span>
+              }
+            </div>
+            <div class="training__cell training__cell--mono" role="cell">
+              {{ ex.nif ?? '—' }}
+            </div>
+            <div class="training__cell" role="cell">
+              <span class="training__type-badge training__type-badge--{{ ex.doc_type }}">
+                {{ docTypeLabel(ex.doc_type) }}
+              </span>
+            </div>
+            <div class="training__cell" role="cell">
+              @if (ex.is_my_doc) {
+                <span class="training__origin-badge training__origin-badge--mine">
+                  <mat-icon>person</mat-icon> Meu
+                </span>
+              } @else {
+                <span class="training__origin-badge training__origin-badge--supplier">
+                  <mat-icon>storefront</mat-icon> Fornecedor
+                </span>
+              }
+            </div>
+            <div class="training__cell training__cell--label" role="cell">
+              {{ ex.user_label ?? ex.notes ?? '—' }}
+            </div>
+            <div class="training__cell training__cell--date" role="cell">
+              {{ ex.created_at | date:'dd/MM/yy' }}
+            </div>
+            <div class="training__row-actions" role="cell">
+              <button class="btn btn--icon btn--ghost" type="button" (click)="startEdit(ex)"
+                [attr.aria-label]="'Editar ' + (ex.supplier ?? ex.id)" title="Editar">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button class="btn btn--icon btn--danger-ghost" type="button" (click)="deleteExample(ex)"
+                [attr.aria-label]="'Apagar ' + (ex.supplier ?? ex.id)" title="Apagar">
+                <mat-icon>delete_outline</mat-icon>
+              </button>
+            </div>
+          </div>
+
+        }
+      }
+    </div>
+  }
+
+</div>

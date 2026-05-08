@@ -27,6 +27,11 @@ export const routes: Routes = [
           import('./components/done-list/done-list').then(m => m.DoneList),
       },
       {
+        path: 'training',
+        loadComponent: () =>
+          import('./components/training/training').then(m => m.Training),
+      },
+      {
         path: 'settings',
         loadComponent: () =>
           import('./components/settings/settings').then(m => m.Settings),

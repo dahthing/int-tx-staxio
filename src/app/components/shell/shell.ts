@@ -56,10 +56,11 @@ export class Shell implements OnInit {
   readonly hasErrors = computed(() => this.errorCount() > 0);
 
   readonly navItems: NavItem[] = [
-    { label: 'Dashboard', icon: 'dashboard',  route: '/' },
-    { label: 'Revisão',   icon: 'rate_review', route: '/review' },
-    { label: 'Tratados',  icon: 'task_alt',    route: '/done' },
-    { label: 'Definições',icon: 'settings',    route: '/settings' },
+    { label: 'Dashboard', icon: 'dashboard',      route: '/' },
+    { label: 'Revisão',   icon: 'rate_review',    route: '/review' },
+    { label: 'Tratados',  icon: 'task_alt',       route: '/done' },
+    { label: 'Treino',    icon: 'model_training', route: '/training' },
+    { label: 'Definições',icon: 'settings',       route: '/settings' },
   ];
 
   // Actualiza o título do browser com badge de pendentes
