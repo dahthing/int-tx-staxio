@@ -46,6 +46,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/insights/insights').then(m => m.Insights),
       },
+      {
+        path: 'suppliers',
+        loadComponent: () =>
+          import('./components/suppliers/suppliers').then(m => m.Suppliers),
+      },
+      {
+        path: 'reconciliation',
+        loadComponent: () =>
+          import('./components/reconciliation/reconciliation').then(m => m.Reconciliation),
+      },
     ],
   },
 ];

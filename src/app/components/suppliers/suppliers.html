@@ -1,0 +1,142 @@
+<div class="suppliers">
+  <header class="suppliers__header">
+    <div>
+      <h1 class="suppliers__title">Fornecedores</h1>
+      @if (!loading()) {
+        <p class="suppliers__subtitle">
+          {{ counts().total }} fornecedores · {{ counts().active }} activos · {{ counts().auto }} detectados pela IA
+        </p>
+      }
+    </div>
+    <button class="btn btn--primary btn--sm" type="button" (click)="showNew()" aria-label="Adicionar fornecedor">
+      <mat-icon>add</mat-icon><span>Novo</span>
+    </button>
+  </header>
+
+  <div class="suppliers__search">
+    <mat-icon class="suppliers__search-icon">search</mat-icon>
+    <input
+      class="suppliers__search-input"
+      type="search"
+      placeholder="Pesquisar por nome, NIF ou keyword…"
+      [value]="filter()"
+      (input)="setFilter($any($event.target).value)"
+      aria-label="Pesquisar fornecedores"
+    />
+  </div>
+
+  @if (newVisible()) {
+    <form class="suppliers__new-form" [formGroup]="newForm" (ngSubmit)="add()" aria-label="Novo fornecedor">
+      <div class="suppliers__new-fields">
+        <div class="field">
+          <label class="field__label" for="ns-name">Nome *</label>
+          <input id="ns-name" class="field__input" formControlName="name" type="text"
+            autocomplete="off" placeholder="Nome do fornecedor" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="ns-nif">NIF</label>
+          <input id="ns-nif" class="field__input" formControlName="nif" type="text"
+            autocomplete="off" placeholder="opcional" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="ns-keywords">Keywords *</label>
+          <input id="ns-keywords" class="field__input" formControlName="keywords" type="text"
+            autocomplete="off" placeholder="ex: amazon, amzn" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="ns-type">Tipo *</label>
+          <select id="ns-type" class="field__input" formControlName="type">
+            <option value="normal">Normal</option>
+            <option value="ecommerce">eCommerce</option>
+            <option value="bank">Banco</option>
+            <option value="supplies">Compras / MP</option>
+          </select>
+        </div>
+      </div>
+      <div class="suppliers__new-actions">
+        <button class="btn btn--primary btn--sm" type="submit" [disabled]="newForm.invalid">
+          <mat-icon>save</mat-icon> Guardar
+        </button>
+        <button class="btn btn--ghost btn--sm" type="button" (click)="cancelNew()">Cancelar</button>
+      </div>
+    </form>
+  }
+
+  @if (loading()) {
+    <div class="suppliers__loading" aria-busy="true" aria-label="A carregar fornecedores">
+      <span class="suppliers__spinner"></span>
+    </div>
+  } @else if (filtered().length === 0) {
+    <div class="suppliers__empty" role="status">
+      <mat-icon>inventory_2</mat-icon>
+      <p>{{ filter() ? 'Nenhum fornecedor encontrado.' : 'Sem fornecedores. Adiciona o primeiro.' }}</p>
+    </div>
+  } @else {
+    <div class="suppliers__table-wrap">
+      <table class="suppliers__table" aria-label="Lista de fornecedores">
+        <thead>
+          <tr>
+            <th scope="col">Nome</th>
+            <th scope="col">NIF</th>
+            <th scope="col">Tipo</th>
+            <th scope="col">Keywords</th>
+            <th scope="col">Origem</th>
+            <th scope="col">Activo</th>
+            <th scope="col"><span class="sr-only">Acções</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of filtered(); track s.id) {
+            <tr [class.suppliers__row--inactive]="!s.active">
+              <td class="suppliers__cell">
+                <input class="suppliers__inline-input" type="text" [value]="s.name"
+                  #nameIn (blur)="saveName(s, nameIn.value)"
+                  [attr.aria-label]="'Nome de ' + s.name" />
+              </td>
+              <td class="suppliers__cell">
+                <input class="suppliers__inline-input suppliers__inline-input--sm" type="text"
+                  [value]="s.nif ?? ''" #nifIn (blur)="saveNif(s, nifIn.value)"
+                  placeholder="—" [attr.aria-label]="'NIF de ' + s.name" />
+              </td>
+              <td class="suppliers__cell">
+                <select class="suppliers__inline-select" [value]="s.type"
+                  (change)="saveType(s, $any($event.target).value)"
+                  [attr.aria-label]="'Tipo de ' + s.name">
+                  <option value="normal">Normal</option>
+                  <option value="ecommerce">eCommerce</option>
+                  <option value="bank">Banco</option>
+                  <option value="supplies">Compras / MP</option>
+                </select>
+              </td>
+              <td class="suppliers__cell suppliers__cell--keywords">
+                <input class="suppliers__inline-input" type="text"
+                  [value]="s.keywords.join(', ')" #kwIn
+                  (blur)="saveKeywords(s, kwIn.value)"
+                  placeholder="ex: amazon, amzn"
+                  [attr.aria-label]="'Keywords de ' + s.name" />
+              </td>
+              <td class="suppliers__cell">
+                @if (s.auto_detected) {
+                  <span class="suppliers__badge suppliers__badge--auto">IA</span>
+                } @else {
+                  <span class="suppliers__badge suppliers__badge--manual">manual</span>
+                }
+              </td>
+              <td class="suppliers__cell">
+                <mat-slide-toggle [checked]="s.active" (change)="toggle(s)"
+                  [attr.aria-label]="(s.active ? 'Desactivar ' : 'Activar ') + s.name">
+                </mat-slide-toggle>
+              </td>
+              <td class="suppliers__cell suppliers__cell--actions">
+                <button mat-icon-button type="button" (click)="delete(s)"
+                  [attr.aria-label]="'Apagar ' + s.name" matTooltip="Apagar">
+                  <mat-icon>delete_outline</mat-icon>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

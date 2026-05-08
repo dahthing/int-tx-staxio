@@ -1,0 +1,201 @@
+.suppliers {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem;
+  background: var(--stx-bg);
+  min-height: 100%;
+
+  @media (min-width: 769px) { padding: 1.5rem; }
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  &__title {
+    margin: 0 0 0.25rem;
+    font-size: 1.375rem;
+    font-weight: 600;
+    color: var(--stx-text);
+  }
+
+  &__subtitle {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--stx-text-muted);
+  }
+
+  &__search {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--stx-surface);
+    border: 1px solid var(--stx-border);
+    border-radius: var(--stx-radius, 6px);
+    padding: 0 0.75rem;
+    max-width: 400px;
+
+    &:focus-within {
+      border-color: var(--stx-primary);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--stx-primary) 20%, transparent);
+    }
+  }
+
+  &__search-icon { color: var(--stx-text-muted); font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; }
+
+  &__search-input {
+    flex: 1;
+    border: none;
+    background: none;
+    outline: none;
+    padding: 0.5rem 0;
+    font-size: 0.875rem;
+    color: var(--stx-text);
+
+    &::placeholder { color: var(--stx-text-muted); }
+  }
+
+  &__loading {
+    display: flex;
+    justify-content: center;
+    padding: 3rem;
+  }
+
+  &__spinner {
+    width: 28px; height: 28px;
+    border: 2px solid var(--stx-border);
+    border-top-color: var(--stx-primary);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  &__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 3rem 1rem;
+    color: var(--stx-text-muted);
+    text-align: center;
+
+    mat-icon { font-size: 2.5rem; width: 2.5rem; height: 2.5rem; opacity: 0.4; }
+    p { margin: 0; font-size: 0.875rem; }
+  }
+
+  &__new-form {
+    background: var(--stx-surface);
+    border: 1px solid var(--stx-border);
+    border-radius: var(--stx-radius, 6px);
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  &__new-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.75rem;
+  }
+
+  &__new-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  &__table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--stx-border);
+    border-radius: var(--stx-radius, 6px);
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+
+    th {
+      text-align: left;
+      padding: 0.625rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--stx-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: var(--stx-bg);
+      border-bottom: 1px solid var(--stx-border);
+    }
+  }
+
+  &__row--inactive {
+    opacity: 0.5;
+  }
+
+  &__cell {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--stx-border);
+    color: var(--stx-text);
+    vertical-align: middle;
+
+    &--keywords { min-width: 200px; }
+    &--actions { width: 48px; }
+
+    tr:last-child & { border-bottom: none; }
+  }
+
+  &__inline-input {
+    width: 100%;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 0.25rem 0.375rem;
+    font-size: 0.875rem;
+    color: var(--stx-text);
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s;
+
+    &:hover { border-color: var(--stx-border); }
+    &:focus { border-color: var(--stx-primary); background: var(--stx-surface); }
+    &--sm { max-width: 120px; }
+  }
+
+  &__inline-select {
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 0.25rem 0.375rem;
+    font-size: 0.875rem;
+    color: var(--stx-text);
+    font-family: inherit;
+    outline: none;
+    cursor: pointer;
+
+    &:hover { border-color: var(--stx-border); }
+    &:focus { border-color: var(--stx-primary); }
+  }
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+
+    &--auto {
+      background: color-mix(in srgb, var(--stx-primary) 12%, transparent);
+      color: var(--stx-primary);
+    }
+    &--manual {
+      background: color-mix(in srgb, var(--stx-text-muted) 12%, transparent);
+      color: var(--stx-text-muted);
+    }
+  }
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }

@@ -439,6 +439,37 @@ supabase secrets set INBOUND_SIGNING_SECRET=&lt;signing_secret_do_resend&gt;</di
         }
       </section>
 
+      <!-- ===== DIGEST SEMANAL ===== -->
+      <section class="settings__section" aria-labelledby="digest-heading">
+        <div class="settings__section-header">
+          <div>
+            <h2 class="settings__section-title" id="digest-heading">
+              <mat-icon>email</mat-icon> Digest Semanal
+            </h2>
+            <p class="settings__section-desc">Resumo automático enviado todas as segundas-feiras às 9h via Resend.</p>
+          </div>
+        </div>
+
+        <div class="settings__fields-grid">
+          <div class="field">
+            <label class="field__label" for="digest-enabled">Activo</label>
+            <mat-slide-toggle id="digest-enabled" formControlName="digest_enabled"
+              aria-label="Activar digest semanal">
+            </mat-slide-toggle>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="digest-email">Email destino</label>
+            <input id="digest-email" class="field__input" formControlName="digest_to_email"
+              type="email" autocomplete="email" placeholder="ex: contabilidade@empresa.pt" />
+            @if (form.controls.digest_to_email.invalid && form.controls.digest_to_email.touched) {
+              <span class="field__error" role="alert">Email inválido</span>
+            }
+            <p class="field__hint">Deixar vazio para usar o valor da variável de ambiente <code>DIGEST_TO_EMAIL</code>.</p>
+          </div>
+        </div>
+      </section>
+
       <!-- ===== FORNECEDORES ===== -->
       <section class="settings__section" aria-labelledby="suppliers-heading">
         <div class="settings__section-header">

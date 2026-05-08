@@ -67,7 +67,9 @@ export class Shell implements OnInit, OnDestroy {
     { label: 'Treino',    icon: 'model_training', route: '/training' },
     { label: 'Definições',icon: 'settings',       route: '/settings' },
     { label: 'Previsão',  icon: 'trending_up',   route: '/budget' },
-    { label: 'Insights',  icon: 'psychology',    route: '/insights' },
+    { label: 'Insights',      icon: 'psychology',    route: '/insights' },
+    { label: 'Fornecedores',  icon: 'store',         route: '/suppliers' },
+    { label: 'Reconciliação', icon: 'account_balance', route: '/reconciliation' },
   ];
 
   readonly #titleEffect = effect(() => {

@@ -232,6 +232,20 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+
+    // Ler configurações de digest do app_config (sobrepõe env vars)
+    const { data: cfgRows } = await supabase
+      .from('app_config')
+      .select('key, value')
+      .in('key', ['digest_enabled', 'digest_to_email']);
+    const cfg = Object.fromEntries((cfgRows ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
+    if (cfg['digest_enabled'] === 'false') {
+      return new Response(JSON.stringify({ skipped: true, reason: 'digest_enabled=false' }), {
+        headers: { ...CORS, 'Content-Type': 'application/json' },
+      });
+    }
+    const toEmail = cfg['digest_to_email'] || TO_EMAIL;
+
     const stats = await gatherStats(supabase);
     const html = buildEmail(stats);
 
@@ -243,7 +257,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         from: FROM_EMAIL,
-        to: [TO_EMAIL],
+        to: [toEmail],
         subject: `Staxio — ${stats.processedThisWeek} docs esta semana · ${stats.pending} pendentes`,
         html,
       }),

@@ -5,16 +5,22 @@
       <h1 class="insights__title">Cost Intelligence</h1>
       <p class="insights__subtitle">Sistema de suporte à decisão financeira</p>
     </div>
-    <div class="insights__year-selector" role="group" aria-label="Seleccionar ano">
-      @for (year of availableYears(); track year) {
-        <button
-          class="insights__year-btn"
-          [class.insights__year-btn--active]="selectedYear() === year"
-          type="button"
-          [attr.aria-pressed]="selectedYear() === year"
-          (click)="selectYear(year)"
-        >{{ year }}</button>
-      }
+    <div class="insights__header-right">
+      <div class="insights__year-selector" role="group" aria-label="Seleccionar ano">
+        @for (year of availableYears(); track year) {
+          <button
+            class="insights__year-btn"
+            [class.insights__year-btn--active]="selectedYear() === year"
+            type="button"
+            [attr.aria-pressed]="selectedYear() === year"
+            (click)="selectYear(year)"
+          >{{ year }}</button>
+        }
+      </div>
+      <button class="insights__btn insights__btn--secondary insights__export-btn"
+        type="button" (click)="exportCsv()" aria-label="Exportar dados do ano em CSV">
+        <mat-icon>download</mat-icon><span>CSV</span>
+      </button>
     </div>
   </header>
 

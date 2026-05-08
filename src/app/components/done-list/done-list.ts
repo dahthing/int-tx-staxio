@@ -61,9 +61,26 @@ export class DoneList implements OnInit {
 
   readonly #filterSupplier = signal('');
   readonly #filterMonth = signal('');
+  readonly #filterDocType = signal('');
+  readonly #filterYear = signal('');
+  readonly #filterValueMin = signal('');
+  readonly #filterValueMax = signal('');
 
   readonly filterSupplier = this.#filterSupplier.asReadonly();
   readonly filterMonth = this.#filterMonth.asReadonly();
+  readonly filterDocType = this.#filterDocType.asReadonly();
+  readonly filterYear = this.#filterYear.asReadonly();
+  readonly filterValueMin = this.#filterValueMin.asReadonly();
+  readonly filterValueMax = this.#filterValueMax.asReadonly();
+
+  readonly availableYears = computed(() => {
+    const years = new Set(
+      this.#entries()
+        .map(e => e.doc_date?.slice(0, 4))
+        .filter((y): y is string => !!y)
+    );
+    return Array.from(years).sort((a, b) => b.localeCompare(a));
+  });
 
   readonly #selectedId = signal<string | null>(null);
   readonly selectedId = this.#selectedId.asReadonly();
@@ -93,9 +110,17 @@ export class DoneList implements OnInit {
   readonly filteredEntries = computed(() => {
     const sup = this.#filterSupplier().toLowerCase().trim();
     const month = this.#filterMonth();
+    const docType = this.#filterDocType();
+    const year = this.#filterYear();
+    const vMin = this.#filterValueMin() ? parseFloat(this.#filterValueMin()) : null;
+    const vMax = this.#filterValueMax() ? parseFloat(this.#filterValueMax()) : null;
     return this.#entries().filter(e => {
       if (sup && !(e.supplier ?? '').toLowerCase().includes(sup)) return false;
       if (month && !(e.doc_date ?? '').startsWith(month)) return false;
+      if (docType && e.doc_type !== docType) return false;
+      if (year && !(e.doc_date ?? '').startsWith(year)) return false;
+      if (vMin != null && (e.value ?? 0) < vMin) return false;
+      if (vMax != null && (e.value ?? 0) > vMax) return false;
       return true;
     });
   });
@@ -114,12 +139,20 @@ export class DoneList implements OnInit {
     await this.#loadDone();
   }
 
-  setSupplierFilter(v: string): void {
-    this.#filterSupplier.set(v);
-  }
+  setSupplierFilter(v: string): void { this.#filterSupplier.set(v); }
+  setMonthFilter(v: string): void { this.#filterMonth.set(v); }
+  setDocTypeFilter(v: string): void { this.#filterDocType.set(v); }
+  setYearFilter(v: string): void { this.#filterYear.set(v); this.#filterMonth.set(''); }
+  setValueMinFilter(v: string): void { this.#filterValueMin.set(v); }
+  setValueMaxFilter(v: string): void { this.#filterValueMax.set(v); }
 
-  setMonthFilter(v: string): void {
-    this.#filterMonth.set(v);
+  clearFilters(): void {
+    this.#filterSupplier.set('');
+    this.#filterMonth.set('');
+    this.#filterDocType.set('');
+    this.#filterYear.set('');
+    this.#filterValueMin.set('');
+    this.#filterValueMax.set('');
   }
 
   onMoveFolder(entry: QueueEntry): void {

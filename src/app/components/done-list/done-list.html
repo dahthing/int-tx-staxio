@@ -19,11 +19,22 @@
       <input
         class="done-list__filter-input"
         type="text"
-        placeholder="Filtrar por fornecedor…"
+        placeholder="Fornecedor…"
         [ngModel]="filterSupplier()"
         (ngModelChange)="setSupplierFilter($event)"
         aria-label="Filtrar por fornecedor"
       />
+      <select
+        class="done-list__filter-input done-list__filter-select"
+        [ngModel]="filterYear()"
+        (ngModelChange)="setYearFilter($event)"
+        aria-label="Filtrar por ano"
+      >
+        <option value="">Todos os anos</option>
+        @for (y of availableYears(); track y) {
+          <option [value]="y">{{ y }}</option>
+        }
+      </select>
       <input
         class="done-list__filter-input"
         type="month"
@@ -31,6 +42,47 @@
         (ngModelChange)="setMonthFilter($event)"
         aria-label="Filtrar por mês"
       />
+      <select
+        class="done-list__filter-input done-list__filter-select"
+        [ngModel]="filterDocType()"
+        (ngModelChange)="setDocTypeFilter($event)"
+        aria-label="Filtrar por tipo"
+      >
+        <option value="">Todos os tipos</option>
+        <option value="received">Recebida</option>
+        <option value="issued">Emitida</option>
+        <option value="invoice_issued">Fatura emitida</option>
+        <option value="receipt_issued">Recibo emitido</option>
+        <option value="quote_issued">Orçamento emitido</option>
+        <option value="ecommerce">E-commerce</option>
+        <option value="bank_statement">Extrato bancário</option>
+        <option value="supplies">Compras</option>
+        <option value="international">Internacional</option>
+        <option value="unknown">Desconhecido</option>
+      </select>
+      <input
+        class="done-list__filter-input done-list__filter-input--short"
+        type="number"
+        placeholder="Valor mín."
+        [ngModel]="filterValueMin()"
+        (ngModelChange)="setValueMinFilter($event)"
+        aria-label="Valor mínimo"
+        min="0"
+      />
+      <input
+        class="done-list__filter-input done-list__filter-input--short"
+        type="number"
+        placeholder="Valor máx."
+        [ngModel]="filterValueMax()"
+        (ngModelChange)="setValueMaxFilter($event)"
+        aria-label="Valor máximo"
+        min="0"
+      />
+      @if (filterSupplier() || filterMonth() || filterDocType() || filterYear() || filterValueMin() || filterValueMax()) {
+        <button class="done-list__filter-clear" type="button" (click)="clearFilters()" aria-label="Limpar filtros">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
     </div>
 
     @if (loading()) {

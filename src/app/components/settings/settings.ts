@@ -26,6 +26,8 @@ interface AppConfig {
   inbound_provider: string;
   inbound_email: string;
   inbound_signing_secret: string;
+  digest_enabled: string;
+  digest_to_email: string;
 }
 
 export interface Supplier {
@@ -95,6 +97,8 @@ export class Settings implements OnInit {
     inbound_provider:               ['resend' as 'resend' | 'sendgrid'],
     inbound_email:                  ['' as string],
     inbound_signing_secret:         ['' as string],
+    digest_enabled:                 [true],
+    digest_to_email:                ['' as string, Validators.email],
   });
 
   readonly newSupplierForm = this.#fb.nonNullable.group({
@@ -118,6 +122,8 @@ export class Settings implements OnInit {
           inbound_provider:               (cfg.inbound_provider as 'resend' | 'sendgrid') ?? 'resend',
           inbound_email:                  cfg.inbound_email ?? '',
           inbound_signing_secret:         '',
+          digest_enabled:                 cfg.digest_enabled !== 'false',
+          digest_to_email:                cfg.digest_to_email ?? '',
         });
         this.#loading.set(false);
       },
@@ -257,6 +263,8 @@ export class Settings implements OnInit {
       inbound_provider:               raw.inbound_provider,
       inbound_email:                  raw.inbound_email,
       ...(raw.inbound_signing_secret ? { inbound_signing_secret: raw.inbound_signing_secret } : {}),
+      digest_enabled:                 String(raw.digest_enabled),
+      ...(raw.digest_to_email ? { digest_to_email: raw.digest_to_email } : {}),
     };
     this.#http.patch<{ updated: string[] }>(this.#configUrl, patch).subscribe({
       next: () => {

@@ -852,6 +852,31 @@ export class Insights implements OnInit {
     } catch { /* ignore */ }
   }
 
+  exportCsv(): void {
+    const docs = this.#yearDocs();
+    if (docs.length === 0) {
+      this.#snackBar.open('Sem dados para exportar', '✕', { duration: 3000 });
+      return;
+    }
+    const header = ['data', 'fornecedor', 'tipo', 'valor', 'moeda', 'meu_doc'];
+    const rows = docs.map(d => [
+      d.doc_date ?? '',
+      `"${(d.supplier ?? '').replace(/"/g, '""')}"`,
+      d.doc_type ?? '',
+      d.value != null ? String(d.value) : '',
+      '',
+      d.is_my_doc ? 'sim' : 'não',
+    ]);
+    const csv = [header, ...rows].map(r => r.join(';')).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `staxio-${this.selectedYear()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   #normalizeSection(section: string): string {
     if (!section) return 'Extras';
     const s = section.toLowerCase();

@@ -388,3 +388,12 @@
     max-width: 320px;
   }
 }
+
+.duplicate-chip {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  font-size: 0.6875rem; font-weight: 600;
+  color: var(--stx-warning);
+  background: color-mix(in srgb, var(--stx-warning) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--stx-warning) 30%, transparent);
+  border-radius: 999px; padding: 0.125rem 0.5rem;
+}

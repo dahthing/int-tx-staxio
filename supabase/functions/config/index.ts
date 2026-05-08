@@ -22,6 +22,8 @@ const ALLOWED_KEYS = [
   'inbound_provider',
   'inbound_email',
   'inbound_signing_secret',
+  'digest_enabled',
+  'digest_to_email',
 ] as const;
 
 // Chaves sensíveis — mascaradas no GET (nunca expostas em claro)

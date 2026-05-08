@@ -28,6 +28,9 @@
               [attr.aria-label]="'Expandir ' + entry.file_name"
             >
               <span class="badge badge--{{ entry.status }}">{{ statusLabel[entry.status] }}</span>
+              @if (entry.is_duplicate_suspect) {
+                <span class="duplicate-chip" aria-label="Suspeito de duplicado">⚠ duplicado</span>
+              }
 
               <span class="review__file" [title]="entry.file_name">{{ entry.file_name }}</span>
 

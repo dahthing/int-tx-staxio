@@ -141,7 +141,7 @@
   }
 
   &__filter-input {
-    flex: 1 1 200px;
+    flex: 1 1 160px;
 
     @media (max-width: 768px) {
       width: 100%;
@@ -159,6 +159,30 @@
       border-color: var(--stx-primary);
       box-shadow: 0 0 0 2px color-mix(in srgb, var(--stx-primary) 25%, transparent);
     }
+
+    &--short {
+      flex: 1 1 100px;
+    }
+  }
+
+  &__filter-select {
+    cursor: pointer;
+    appearance: auto;
+  }
+
+  &__filter-clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: 1px solid var(--stx-border);
+    border-radius: var(--stx-radius, 6px);
+    color: var(--stx-text-muted);
+    cursor: pointer;
+    padding: 0.5rem;
+    flex-shrink: 0;
+
+    &:hover { color: var(--stx-text); border-color: var(--stx-text-muted); }
   }
 
   &__items {

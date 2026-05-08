@@ -1,0 +1,111 @@
+<div class="recon">
+  <header class="recon__header">
+    <div>
+      <h1 class="recon__title">Reconciliação</h1>
+      @if (!loading()) {
+        <p class="recon__subtitle">
+          {{ counts().total }} transações · {{ counts().reconciled }} reconciliadas · {{ counts().unreconciled }} por reconciliar
+        </p>
+      }
+    </div>
+    <button class="btn btn--primary btn--sm" type="button" (click)="runAuto()" [disabled]="running()" aria-label="Executar reconciliação automática">
+      @if (running()) {
+        <span class="recon__spin"></span>
+      } @else {
+        <mat-icon>auto_fix_high</mat-icon>
+      }
+      <span>Reconciliar auto</span>
+    </button>
+  </header>
+
+  @if (lastResult(); as r) {
+    <div class="recon__result" role="status">
+      <mat-icon>check_circle</mat-icon>
+      <span>Última execução: <strong>{{ r.matched }}</strong> reconciliadas · <strong>{{ r.unmatched }}</strong> sem par</span>
+    </div>
+  }
+
+  <div class="recon__tabs" role="tablist">
+    <button role="tab" class="recon__tab" [class.recon__tab--active]="filter() === 'unreconciled'"
+      (click)="setFilter('unreconciled')" aria-label="Por reconciliar">
+      Por reconciliar ({{ counts().unreconciled }})
+    </button>
+    <button role="tab" class="recon__tab" [class.recon__tab--active]="filter() === 'reconciled'"
+      (click)="setFilter('reconciled')" aria-label="Reconciliadas">
+      Reconciliadas ({{ counts().reconciled }})
+    </button>
+    <button role="tab" class="recon__tab" [class.recon__tab--active]="filter() === 'all'"
+      (click)="setFilter('all')" aria-label="Todas">
+      Todas ({{ counts().total }})
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="recon__loading" aria-busy="true" aria-label="A carregar transações">
+      <span class="recon__spinner"></span>
+    </div>
+  } @else if (filtered().length === 0) {
+    <div class="recon__empty" role="status">
+      <mat-icon>account_balance</mat-icon>
+      <p>Nenhuma transação encontrada.</p>
+    </div>
+  } @else {
+    <div class="recon__table-wrap">
+      <table class="recon__table" aria-label="Transações bancárias">
+        <thead>
+          <tr>
+            <th scope="col">Data</th>
+            <th scope="col">Descrição</th>
+            <th scope="col">Montante</th>
+            <th scope="col">Referência</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Fatura ligada</th>
+            <th scope="col"><span class="sr-only">Acções</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (txn of filtered(); track txn.id) {
+            <tr [class.recon__row--reconciled]="txn.is_reconciled">
+              <td class="recon__cell recon__cell--date">{{ txn.txn_date.slice(0, 10) }}</td>
+              <td class="recon__cell recon__cell--desc">
+                <span class="recon__desc">{{ txn.description }}</span>
+                @if (txn.counterparty) {
+                  <span class="recon__counterparty">{{ txn.counterparty }}</span>
+                }
+              </td>
+              <td class="recon__cell recon__cell--amount" [class.recon__cell--debit]="txn.amount < 0" [class.recon__cell--credit]="txn.amount > 0">
+                {{ formatAmount(txn.amount) }}
+              </td>
+              <td class="recon__cell recon__cell--ref">{{ txn.reference ?? '—' }}</td>
+              <td class="recon__cell">
+                @if (txn.is_reconciled) {
+                  <span class="recon__badge recon__badge--ok">reconciliado</span>
+                } @else {
+                  <span class="recon__badge recon__badge--pending">pendente</span>
+                }
+              </td>
+              <td class="recon__cell">
+                @if (txn.invoice) {
+                  <div class="recon__invoice">
+                    <span class="recon__invoice-supplier">{{ txn.invoice.supplier ?? '—' }}</span>
+                    <span class="recon__invoice-meta">{{ txn.invoice.doc_date ?? '' }} · {{ formatAmount(txn.invoice.value ?? 0) }}</span>
+                  </div>
+                } @else {
+                  <span class="recon__none">—</span>
+                }
+              </td>
+              <td class="recon__cell recon__cell--actions">
+                @if (txn.is_reconciled) {
+                  <button mat-icon-button type="button" (click)="unlink(txn)"
+                    [attr.aria-label]="'Remover reconciliação de ' + txn.description" matTooltip="Remover reconciliação">
+                    <mat-icon>link_off</mat-icon>
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

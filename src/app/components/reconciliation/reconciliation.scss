@@ -1,0 +1,203 @@
+.recon {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem;
+  background: var(--stx-bg);
+  min-height: 100%;
+
+  @media (min-width: 769px) { padding: 1.5rem; }
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  &__title {
+    margin: 0 0 0.25rem;
+    font-size: 1.375rem;
+    font-weight: 600;
+    color: var(--stx-text);
+  }
+
+  &__subtitle {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--stx-text-muted);
+  }
+
+  &__result {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: color-mix(in srgb, var(--stx-primary) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--stx-primary) 25%, transparent);
+    border-radius: var(--stx-radius, 6px);
+    font-size: 0.875rem;
+    color: var(--stx-text);
+
+    mat-icon { color: var(--stx-primary); font-size: 18px; width: 18px; height: 18px; }
+  }
+
+  &__spin {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: recon-spin 0.7s linear infinite;
+  }
+
+  &__tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--stx-border);
+  }
+
+  &__tab {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    color: var(--stx-text-muted);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+
+    &:hover { color: var(--stx-text); }
+
+    &--active {
+      color: var(--stx-primary);
+      border-bottom-color: var(--stx-primary);
+      font-weight: 600;
+    }
+  }
+
+  &__loading {
+    display: flex;
+    justify-content: center;
+    padding: 3rem;
+  }
+
+  &__spinner {
+    width: 28px; height: 28px;
+    border: 2px solid var(--stx-border);
+    border-top-color: var(--stx-primary);
+    border-radius: 50%;
+    animation: recon-spin 0.7s linear infinite;
+  }
+
+  &__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 3rem 1rem;
+    color: var(--stx-text-muted);
+    text-align: center;
+
+    mat-icon { font-size: 2.5rem; width: 2.5rem; height: 2.5rem; opacity: 0.4; }
+    p { margin: 0; font-size: 0.875rem; }
+  }
+
+  &__table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--stx-border);
+    border-radius: var(--stx-radius, 6px);
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+
+    th {
+      text-align: left;
+      padding: 0.625rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--stx-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: var(--stx-bg);
+      border-bottom: 1px solid var(--stx-border);
+      white-space: nowrap;
+    }
+  }
+
+  &__row--reconciled {
+    background: color-mix(in srgb, var(--stx-primary) 3%, transparent);
+  }
+
+  &__cell {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--stx-border);
+    color: var(--stx-text);
+    vertical-align: middle;
+
+    &--date   { white-space: nowrap; color: var(--stx-text-muted); font-size: 0.8125rem; }
+    &--desc   { min-width: 220px; }
+    &--amount { white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 500; }
+    &--debit  { color: var(--stx-error, #f87171); }
+    &--credit { color: var(--stx-success, #4ade80); }
+    &--ref    { font-size: 0.8125rem; color: var(--stx-text-muted); }
+    &--actions { width: 48px; }
+
+    tr:last-child & { border-bottom: none; }
+  }
+
+  &__desc {
+    display: block;
+    font-size: 0.875rem;
+  }
+
+  &__counterparty {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--stx-text-muted);
+  }
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    white-space: nowrap;
+
+    &--ok {
+      background: color-mix(in srgb, var(--stx-primary) 12%, transparent);
+      color: var(--stx-primary);
+    }
+    &--pending {
+      background: color-mix(in srgb, #f59e0b 12%, transparent);
+      color: #f59e0b;
+    }
+  }
+
+  &__invoice {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  &__invoice-supplier {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  &__invoice-meta {
+    font-size: 0.75rem;
+    color: var(--stx-text-muted);
+  }
+
+  &__none { color: var(--stx-text-muted); }
+}
+
+@keyframes recon-spin { to { transform: rotate(360deg); } }
