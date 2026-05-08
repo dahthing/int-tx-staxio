@@ -53,163 +53,264 @@
 
             <!-- EDIT FORM -->
             @if (expandedId() === entry.id) {
-              <div class="review__split">
-                <div class="review__preview">
-                  @if (previewUrl()) {
-                  <iframe class="review__preview-frame" [src]="previewUrl()!" title="Pré-visualização do documento" allow="autoplay"
-                    sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
-                  } @else {
-                  <div class="review__preview-unavailable">
-                    <mat-icon>description</mat-icon>
-                    <span>Pré-visualização indisponível</span>
-                  </div>
-                  }
-                </div>
 
-              <form
-                class="review__form"
-                [formGroup]="form"
-                (ngSubmit)="onApprove(entry)"
-                novalidate
-                aria-label="Editar metadados"
-              >
-                <div class="review__fields">
-                  <div class="field">
-                    <label class="field__label" for="supplier-{{ entry.id }}">Fornecedor</label>
-                    <input id="supplier-{{ entry.id }}" class="field__input" type="text"
-                      formControlName="supplier" placeholder="Nome do fornecedor" />
-                  </div>
+              @if (isMobile()) {
+                <!-- ===== MOBILE LAYOUT ===== -->
+                <div class="review__mobile-expand">
 
-                  <div class="field">
-                    <label class="field__label" for="doc_date-{{ entry.id }}">Data</label>
-                    <input id="doc_date-{{ entry.id }}" class="field__input" type="date"
-                      formControlName="doc_date" />
-                  </div>
-
-                  <div class="field">
-                    <label class="field__label" for="value-{{ entry.id }}">Valor (€)</label>
-                    <input id="value-{{ entry.id }}" class="field__input" type="number"
-                      step="0.01" min="0" formControlName="value" placeholder="0.00" />
-                  </div>
-
-                  <div class="field">
-                    <label class="field__label" for="nif-{{ entry.id }}">NIF / VAT</label>
-                    <input id="nif-{{ entry.id }}" class="field__input" type="text"
-                      formControlName="nif" placeholder="123456789 ou DE123456789" />
-                  </div>
-
-                  <div class="field">
-                    <label class="field__label" for="country-{{ entry.id }}">País</label>
-                    <input id="country-{{ entry.id }}" class="field__input" type="text"
-                      formControlName="country" placeholder="Portugal" />
-                  </div>
-
-                  <div class="field field--wide">
-                    <label class="field__label">
-                      Pasta destino
-                      @if (form.controls.dest_path.invalid && form.controls.dest_path.touched) {
-                        <span class="field__error" role="alert">Obrigatório</span>
-                      }
-                    </label>
-                    <div class="picker-trigger">
-                      <span
-                        class="picker-trigger__path"
-                        [class.picker-trigger__path--empty]="!form.controls.dest_path.value"
-                        [class.picker-trigger__path--invalid]="form.controls.dest_path.invalid && form.controls.dest_path.touched"
-                        aria-live="polite"
-                      >
-                        {{ form.controls.dest_path.value || 'Nenhuma pasta selecionada' }}
-                      </span>
-                      <button
-                        type="button"
+                  <!-- Preview accordion -->
+                  <div class="review__mobile-preview-bar">
+                    <button
+                      class="review__mobile-preview-toggle"
+                      type="button"
+                      (click)="togglePreview()"
+                      [attr.aria-expanded]="!previewCollapsed()"
+                    >
+                      <mat-icon>description</mat-icon>
+                      <span>{{ previewCollapsed() ? 'Ver documento' : 'Ocultar documento' }}</span>
+                      <mat-icon class="review__mobile-preview-chevron">
+                        {{ previewCollapsed() ? 'expand_more' : 'expand_less' }}
+                      </mat-icon>
+                    </button>
+                    @if (driveViewerUrl()) {
+                      <a
                         class="btn btn--ghost btn--sm"
-                        (click)="openPicker()"
-                        [disabled]="!rootFolderId()"
-                        aria-label="Escolher pasta de destino"
+                        [href]="driveViewerUrl()!"
+                        target="_blank"
+                        rel="noopener"
+                        aria-label="Abrir no Google Drive"
                       >
-                        <mat-icon>folder_open</mat-icon>
-                        Escolher
+                        <mat-icon>open_in_new</mat-icon>
+                      </a>
+                    }
+                  </div>
+
+                  @if (!previewCollapsed() && driveViewerUrl()) {
+                    <div class="review__mobile-preview-frame-wrap">
+                      <iframe
+                        class="review__preview-frame"
+                        [src]="driveViewerUrl()!"
+                        title="Pré-visualização do documento"
+                        allow="autoplay"
+                        sandbox="allow-scripts allow-same-origin allow-popups"
+                      ></iframe>
+                    </div>
+                  }
+
+                  <form
+                    class="review__form review__form--mobile"
+                    [formGroup]="form"
+                    (ngSubmit)="onApprove(entry)"
+                    novalidate
+                    aria-label="Editar metadados"
+                  >
+                    <div class="review__fields">
+                      <div class="field">
+                        <label class="field__label" for="m-supplier-{{ entry.id }}">Fornecedor</label>
+                        <input id="m-supplier-{{ entry.id }}" class="field__input" type="text"
+                          formControlName="supplier" placeholder="Nome do fornecedor"
+                          autocomplete="organization" />
+                      </div>
+                      <div class="field">
+                        <label class="field__label" for="m-doc_date-{{ entry.id }}">Data</label>
+                        <input id="m-doc_date-{{ entry.id }}" class="field__input" type="date"
+                          formControlName="doc_date" />
+                      </div>
+                      <div class="field">
+                        <label class="field__label" for="m-value-{{ entry.id }}">Valor (€)</label>
+                        <input id="m-value-{{ entry.id }}" class="field__input" type="number"
+                          step="0.01" min="0" formControlName="value" placeholder="0.00"
+                          inputmode="decimal" />
+                      </div>
+                      <div class="field">
+                        <label class="field__label" for="m-nif-{{ entry.id }}">NIF / VAT</label>
+                        <input id="m-nif-{{ entry.id }}" class="field__input" type="text"
+                          formControlName="nif" placeholder="123456789"
+                          inputmode="numeric" autocomplete="off" />
+                      </div>
+                      <div class="field field--wide">
+                        <label class="field__label">Pasta destino</label>
+                        <div class="picker-trigger">
+                          <span class="picker-trigger__path"
+                            [class.picker-trigger__path--empty]="!form.controls.dest_path.value">
+                            {{ form.controls.dest_path.value || 'Nenhuma pasta selecionada' }}
+                          </span>
+                          <button type="button" class="btn btn--ghost btn--sm"
+                            (click)="openPicker()" [disabled]="!rootFolderId()"
+                            aria-label="Escolher pasta">
+                            <mat-icon>folder_open</mat-icon>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="field field--wide">
+                        <label class="field__label" for="m-dest_file_name-{{ entry.id }}">Nome do ficheiro</label>
+                        <input id="m-dest_file_name-{{ entry.id }}" class="field__input"
+                          type="text" formControlName="dest_file_name"
+                          placeholder="2025-01-15_fornecedor_150.00.pdf" />
+                      </div>
+                      <div class="field field--wide">
+                        <label class="field__label field__label--toggle" for="m-is_my_doc-{{ entry.id }}">
+                          <input id="m-is_my_doc-{{ entry.id }}" type="checkbox"
+                            class="field__checkbox" formControlName="is_my_doc" />
+                          É documento emitido por mim
+                        </label>
+                      </div>
+                      @if (form.controls.is_my_doc.value) {
+                        <div class="field field--wide">
+                          <label class="field__label" for="m-my_doc_kind-{{ entry.id }}">Tipo emitido</label>
+                          <select id="m-my_doc_kind-{{ entry.id }}" class="field__input"
+                            formControlName="my_doc_kind">
+                            <option value="">Selecionar…</option>
+                            <option value="invoice_issued">Fatura emitida</option>
+                            <option value="receipt_issued">Recibo</option>
+                            <option value="quote_issued">Orçamento</option>
+                          </select>
+                        </div>
+                      }
+                    </div>
+
+                    <!-- Sticky actions mobile -->
+                    <div class="review__form-actions review__form-actions--sticky">
+                      <button type="button" class="btn btn--danger btn--sm review__delete-btn"
+                        (click)="onDelete(entry)" [disabled]="actionBusy()"
+                        aria-label="Apagar registo">
+                        <mat-icon>delete_outline</mat-icon>
+                      </button>
+                      <button type="button" class="btn btn--ghost btn--sm"
+                        (click)="onIgnore(entry)" [disabled]="actionBusy()">
+                        <mat-icon>do_not_disturb</mat-icon>
+                        Ignorar
+                      </button>
+                      <button type="submit" class="btn btn--primary btn--sm"
+                        [disabled]="actionBusy() || form.invalid" [attr.aria-busy]="actionBusy()">
+                        <mat-icon>check</mat-icon>
+                        @if (actionBusy()) { A mover… } @else { Aprovar }
                       </button>
                     </div>
+                  </form>
+                </div>
+
+              } @else {
+                <!-- ===== DESKTOP LAYOUT ===== -->
+                <div class="review__split">
+                  <div class="review__preview">
+                    @if (previewUrl()) {
+                      <iframe class="review__preview-frame" [src]="previewUrl()!"
+                        title="Pré-visualização do documento" allow="autoplay"
+                        sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
+                    } @else {
+                      <div class="review__preview-unavailable">
+                        <mat-icon>description</mat-icon>
+                        <span>Pré-visualização indisponível</span>
+                      </div>
+                    }
                   </div>
 
-                  <div class="field field--wide">
-                    <label class="field__label" for="dest_file_name-{{ entry.id }}">
-                      Nome do ficheiro
-                      @if (form.controls.dest_file_name.invalid && form.controls.dest_file_name.touched) {
-                        <span class="field__error" role="alert">Obrigatório</span>
+                  <form class="review__form" [formGroup]="form" (ngSubmit)="onApprove(entry)"
+                    novalidate aria-label="Editar metadados">
+                    <div class="review__fields">
+                      <div class="field">
+                        <label class="field__label" for="supplier-{{ entry.id }}">Fornecedor</label>
+                        <input id="supplier-{{ entry.id }}" class="field__input" type="text"
+                          formControlName="supplier" placeholder="Nome do fornecedor" />
+                      </div>
+                      <div class="field">
+                        <label class="field__label" for="doc_date-{{ entry.id }}">Data</label>
+                        <input id="doc_date-{{ entry.id }}" class="field__input" type="date"
+                          formControlName="doc_date" />
+                      </div>
+                      <div class="field">
+                        <label class="field__label" for="value-{{ entry.id }}">Valor (€)</label>
+                        <input id="value-{{ entry.id }}" class="field__input" type="number"
+                          step="0.01" min="0" formControlName="value" placeholder="0.00" />
+                      </div>
+                      <div class="field">
+                        <label class="field__label" for="nif-{{ entry.id }}">NIF / VAT</label>
+                        <input id="nif-{{ entry.id }}" class="field__input" type="text"
+                          formControlName="nif" placeholder="123456789 ou DE123456789" />
+                      </div>
+                      <div class="field">
+                        <label class="field__label" for="country-{{ entry.id }}">País</label>
+                        <input id="country-{{ entry.id }}" class="field__input" type="text"
+                          formControlName="country" placeholder="Portugal" />
+                      </div>
+                      <div class="field field--wide">
+                        <label class="field__label">
+                          Pasta destino
+                          @if (form.controls.dest_path.invalid && form.controls.dest_path.touched) {
+                            <span class="field__error" role="alert">Obrigatório</span>
+                          }
+                        </label>
+                        <div class="picker-trigger">
+                          <span class="picker-trigger__path"
+                            [class.picker-trigger__path--empty]="!form.controls.dest_path.value"
+                            [class.picker-trigger__path--invalid]="form.controls.dest_path.invalid && form.controls.dest_path.touched"
+                            aria-live="polite">
+                            {{ form.controls.dest_path.value || 'Nenhuma pasta selecionada' }}
+                          </span>
+                          <button type="button" class="btn btn--ghost btn--sm"
+                            (click)="openPicker()" [disabled]="!rootFolderId()"
+                            aria-label="Escolher pasta de destino">
+                            <mat-icon>folder_open</mat-icon>
+                            Escolher
+                          </button>
+                        </div>
+                      </div>
+                      <div class="field field--wide">
+                        <label class="field__label" for="dest_file_name-{{ entry.id }}">
+                          Nome do ficheiro
+                          @if (form.controls.dest_file_name.invalid && form.controls.dest_file_name.touched) {
+                            <span class="field__error" role="alert">Obrigatório</span>
+                          }
+                        </label>
+                        <input id="dest_file_name-{{ entry.id }}" class="field__input"
+                          [class.field__input--invalid]="form.controls.dest_file_name.invalid && form.controls.dest_file_name.touched"
+                          type="text" formControlName="dest_file_name"
+                          placeholder="2025-01-15_fornecedor_150.00.pdf" />
+                      </div>
+                      <div class="field field--wide">
+                        <label class="field__label field__label--toggle" for="is_my_doc-{{ entry.id }}">
+                          <input id="is_my_doc-{{ entry.id }}" type="checkbox"
+                            class="field__checkbox" formControlName="is_my_doc" />
+                          É documento emitido por mim
+                        </label>
+                      </div>
+                      @if (form.controls.is_my_doc.value) {
+                        <div class="field field--wide">
+                          <label class="field__label" for="my_doc_kind-{{ entry.id }}">Tipo de documento emitido</label>
+                          <select id="my_doc_kind-{{ entry.id }}" class="field__input"
+                            formControlName="my_doc_kind" aria-required="true">
+                            <option value="">Selecionar…</option>
+                            <option value="invoice_issued">Fatura emitida</option>
+                            <option value="receipt_issued">Recibo</option>
+                            <option value="quote_issued">Orçamento</option>
+                          </select>
+                        </div>
                       }
-                    </label>
-                    <input id="dest_file_name-{{ entry.id }}" class="field__input"
-                      [class.field__input--invalid]="form.controls.dest_file_name.invalid && form.controls.dest_file_name.touched"
-                      type="text" formControlName="dest_file_name"
-                      placeholder="2025-01-15_fornecedor_150.00.pdf" />
-                  </div>
-
-                  <div class="field field--wide">
-                    <label class="field__label field__label--toggle" for="is_my_doc-{{ entry.id }}">
-                      <input
-                        id="is_my_doc-{{ entry.id }}"
-                        type="checkbox"
-                        class="field__checkbox"
-                        formControlName="is_my_doc"
-                      />
-                      É documento emitido por mim
-                    </label>
-                  </div>
-
-                  @if (form.controls.is_my_doc.value) {
-                    <div class="field field--wide">
-                      <label class="field__label" for="my_doc_kind-{{ entry.id }}">Tipo de documento emitido</label>
-                      <select
-                        id="my_doc_kind-{{ entry.id }}"
-                        class="field__input"
-                        formControlName="my_doc_kind"
-                        aria-required="true"
-                      >
-                        <option value="">Selecionar…</option>
-                        <option value="invoice_issued">Fatura emitida</option>
-                        <option value="receipt_issued">Recibo</option>
-                        <option value="quote_issued">Orçamento</option>
-                      </select>
                     </div>
-                  }
-                </div>
 
-                <div class="review__form-actions">
-                  <button
-                    type="button"
-                    class="btn btn--danger btn--sm review__delete-btn"
-                    (click)="onDelete(entry)"
-                    [disabled]="actionBusy()"
-                    aria-label="Apagar registo da fila"
-                    title="Apaga este registo para voltar a importar"
-                  >
-                    <mat-icon>delete_outline</mat-icon>
-                    Apagar registo
-                  </button>
-                  <button
-                    type="button"
-                    class="btn btn--ghost btn--sm"
-                    (click)="onIgnore(entry)"
-                    [disabled]="actionBusy()"
-                    aria-label="Ignorar este documento"
-                  >
-                    <mat-icon>do_not_disturb</mat-icon>
-                    Ignorar
-                  </button>
-                  <button
-                    type="submit"
-                    class="btn btn--primary btn--sm"
-                    [disabled]="actionBusy() || form.invalid"
-                    [attr.aria-busy]="actionBusy()"
-                  >
-                    <mat-icon>check</mat-icon>
-                    @if (actionBusy()) { A mover… } @else { Aprovar e mover }
-                  </button>
+                    <div class="review__form-actions">
+                      <button type="button" class="btn btn--danger btn--sm review__delete-btn"
+                        (click)="onDelete(entry)" [disabled]="actionBusy()"
+                        aria-label="Apagar registo da fila" title="Apaga este registo">
+                        <mat-icon>delete_outline</mat-icon>
+                        Apagar registo
+                      </button>
+                      <button type="button" class="btn btn--ghost btn--sm"
+                        (click)="onIgnore(entry)" [disabled]="actionBusy()"
+                        aria-label="Ignorar este documento">
+                        <mat-icon>do_not_disturb</mat-icon>
+                        Ignorar
+                      </button>
+                      <button type="submit" class="btn btn--primary btn--sm"
+                        [disabled]="actionBusy() || form.invalid" [attr.aria-busy]="actionBusy()">
+                        <mat-icon>check</mat-icon>
+                        @if (actionBusy()) { A mover… } @else { Aprovar e mover }
+                      </button>
+                    </div>
+                  </form>
                 </div>
-              </form>
-              </div>
+              }
             }
           </li>
         }

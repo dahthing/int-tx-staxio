@@ -48,10 +48,18 @@
     <ol class="log-viewer__list" reversed>
       @for (log of filtered(); track log.id) {
         <li class="log-viewer__entry log-viewer__entry--{{ log.status }}">
-          <span class="log-viewer__time">
+          <span class="log-viewer__entry-top">
+            <span class="log-viewer__action badge badge--{{ log.action }}">
+              {{ actionLabel[log.action] }}
+            </span>
+            <span class="log-viewer__time">
+              {{ log.created_at | date:'HH:mm:ss' }}
+            </span>
+          </span>
+          <span class="log-viewer__time" aria-hidden="true">
             {{ log.created_at | date:'dd/MM HH:mm:ss' }}
           </span>
-          <span class="log-viewer__action badge badge--{{ log.action }}">
+          <span class="log-viewer__action badge badge--{{ log.action }}" aria-hidden="true">
             {{ actionLabel[log.action] }}
           </span>
           <span class="log-viewer__file" [title]="log.file_name">

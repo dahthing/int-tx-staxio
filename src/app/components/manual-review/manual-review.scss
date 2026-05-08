@@ -4,7 +4,9 @@
   height: 100%;
 
   &__header {
-    padding: 1.5rem 2rem 1rem;
+    padding: 1.5rem 1rem 1rem;
+
+    @media (min-width: 769px) { padding: 1.5rem 2rem 1rem; }
     border-bottom: 1px solid var(--stx-border);
     background: var(--stx-surface);
     flex-shrink: 0;
@@ -26,7 +28,9 @@
   &__body {
     flex: 1;
     overflow-y: auto;
-    padding: 1.5rem 2rem;
+    padding: 1rem;
+
+    @media (min-width: 769px) { padding: 1.5rem 2rem; }
   }
 
   &__list {
@@ -183,10 +187,75 @@
     justify-content: flex-end;
     gap: 0.625rem;
     padding-top: 0.25rem;
+
+    &--sticky {
+      position: sticky;
+      bottom: 0;
+      background: var(--stx-surface-2);
+      padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+      margin: 0 -1rem -1rem;
+      border-top: 1px solid var(--stx-border);
+    }
   }
 
   &__delete-btn {
     margin-right: auto;
+  }
+
+  // ============================================================
+  // MOBILE LAYOUT
+  // ============================================================
+  &__mobile-expand {
+    border-top: 1px solid var(--stx-border);
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__mobile-preview-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    background: var(--stx-surface-2);
+    border-bottom: 1px solid var(--stx-border);
+  }
+
+  &__mobile-preview-toggle {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: transparent;
+    border: none;
+    color: var(--stx-text-muted);
+    font-size: 0.875rem;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+    touch-action: manipulation;
+    min-height: 44px;
+
+    mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--stx-primary); }
+    span { flex: 1; }
+  }
+
+  &__mobile-preview-chevron {
+    color: var(--stx-text-muted) !important;
+    font-size: 18px !important;
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  &__mobile-preview-frame-wrap {
+    height: 260px;
+    background: #1a1a1a;
+    flex-shrink: 0;
+  }
+
+  &__form--mobile {
+    padding: 1rem;
+    background: var(--stx-surface-2);
   }
 }
 

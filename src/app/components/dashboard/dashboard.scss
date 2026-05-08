@@ -5,7 +5,7 @@
   background: var(--stx-bg);
 
   // ============================================================
-  // HEADER
+  // HEADER (topbar template)
   // ============================================================
   &__header-inline {
     display: flex;
@@ -38,39 +38,141 @@
   }
 
   // ============================================================
+  // MOBILE HERO
+  // ============================================================
+  &__hero {
+    background: linear-gradient(135deg, var(--stx-primary) 0%, color-mix(in srgb, var(--stx-primary) 70%, #000) 100%);
+    padding: 1.5rem 1.25rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.125rem;
+    flex-shrink: 0;
+  }
+
+  &__hero-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__hero-label {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 0.02em;
+  }
+
+  &__hero-value {
+    font-size: 3rem;
+    font-weight: 800;
+    line-height: 1;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+
+    &--zero { opacity: 0.4; }
+  }
+
+  &__hero-meta {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  &__hero-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+
+    mat-icon { font-size: 14px; width: 14px; height: 14px; }
+
+    &--error { background: color-mix(in srgb, var(--stx-error) 40%, rgba(0,0,0,0.2)); }
+    &--done  { background: color-mix(in srgb, var(--stx-success) 30%, rgba(255,255,255,0.1)); }
+  }
+
+  &__hero-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  &__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: opacity 0.15s, transform 0.1s;
+    white-space: nowrap;
+
+    mat-icon { font-size: 16px; width: 16px; height: 16px; }
+
+    &:active { transform: scale(0.97); }
+    &:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    &--primary {
+      background: #fff;
+      color: var(--stx-primary);
+    }
+
+    &--ghost {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.25);
+    }
+  }
+
+  // ============================================================
   // STATISTICS
   // ============================================================
   &__statistics {
-    padding: 0.875rem 2rem;
+    padding: 0.875rem 1rem;
     border-bottom: 1px solid var(--stx-border);
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+
+    @media (min-width: 769px) { padding: 0.875rem 2rem; }
   }
 
   &__charts {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 1rem;
 
-    @media (max-width: 1100px) {
-      grid-template-columns: 1fr 1fr;
-    }
-
-    @media (max-width: 700px) {
-      grid-template-columns: 1fr;
-    }
+    @media (min-width: 700px)  { grid-template-columns: 1fr 1fr; }
+    @media (min-width: 1100px) { grid-template-columns: 1fr 1fr 1fr; }
   }
 
   // ============================================================
-  // DRAWER
+  // QUEUE
   // ============================================================
-  &__drawer-container {
-    flex: 1;
-    min-height: 0;
-    // override mat-drawer-container background
-    background: transparent !important;
+  &__queue {
+    padding: 1rem;
+    min-width: 0;
+
+    @media (min-width: 769px) { padding: 1.25rem 2rem; }
+  }
+
+  &__skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem 0;
   }
 
   // ============================================================
@@ -85,33 +187,52 @@
   }
 
   // ============================================================
-  // LOG DRAWER
+  // DRAWER (desktop: slide from right / mobile: bottom sheet)
   // ============================================================
   &__log-drawer {
     position: fixed;
+    background: var(--stx-surface);
+    display: flex;
+    flex-direction: column;
+    z-index: 201;
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    // Desktop: slide from right
     top: 0;
     right: 0;
     width: 80vw;
     min-width: 320px;
-    height: 100vh;
-    background: var(--stx-surface);
+    height: 100dvh;
     border-left: 1px solid var(--stx-border);
-    display: flex;
-    flex-direction: column;
-    z-index: 201;
     transform: translateX(100%);
     transition: transform 0.25s ease;
-    overflow-y: auto;
-    overflow-x: hidden;
 
     &--open { transform: translateX(0); }
 
-    @media (max-width: 600px) { width: 95vw; min-width: unset; }
+    // Mobile: bottom sheet
+    &--sheet {
+      top: auto;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      min-width: unset;
+      height: auto;
+      max-height: 85dvh;
+      border-left: none;
+      border-top: 1px solid var(--stx-border);
+      border-radius: 16px 16px 0 0;
+      transform: translateY(100%);
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      padding-bottom: env(safe-area-inset-bottom);
+
+      &.dashboard__log-drawer--open { transform: translateY(0); }
+    }
   }
 
   &__edit-drawer {
     width: 480px;
-
     @media (max-width: 600px) { width: 95vw; }
   }
 
@@ -123,11 +244,17 @@
 
   &__log-drawer-header {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem 1.25rem;
+    flex-direction: column;
+    padding: 0.75rem 1.25rem;
     border-bottom: 1px solid var(--stx-border);
     flex-shrink: 0;
+    gap: 0.5rem;
+  }
+
+  &__log-drawer-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
 
   &__log-drawer-title {
@@ -136,24 +263,18 @@
     margin: 0;
   }
 
-  // ============================================================
-  // QUEUE (full width)
-  // ============================================================
-  &__queue {
-    padding: 1.25rem 2rem;
-    min-width: 0;
-  }
-
-  &__skeleton {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    padding: 1rem 0;
+  // Sheet drag handle
+  &__sheet-handle {
+    width: 36px;
+    height: 4px;
+    background: var(--stx-border);
+    border-radius: 2px;
+    margin: 0 auto;
   }
 }
 
 // ============================================================
-// STAT BADGES (header inline)
+// STAT BADGES
 // ============================================================
 .stat-badge {
   display: inline-flex;
@@ -174,7 +295,7 @@
 }
 
 // ============================================================
-// STATS (legacy — kept for compatibility)
+// STAT (legacy)
 // ============================================================
 .stat {
   display: flex;
@@ -209,7 +330,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 3rem 2rem;
+  padding: 3rem 1rem;
   text-align: center;
   min-height: 200px;
 

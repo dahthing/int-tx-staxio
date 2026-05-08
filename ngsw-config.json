@@ -30,12 +30,22 @@
   "dataGroups": [
     {
       "name": "supabase-api",
-      "urls": ["https://uwjajsukgdulyvjjeazd.supabase.co/**"],
+      "urls": ["https://uwjajsukgdulyvjjeazd.supabase.co/rest/v1/processing_queue**", "https://uwjajsukgdulyvjjeazd.supabase.co/rest/v1/processing_logs**"],
       "cacheConfig": {
         "maxSize": 100,
-        "maxAge": "1m",
-        "timeout": "10s",
+        "maxAge": "5m",
+        "timeout": "5s",
         "strategy": "freshness"
+      }
+    },
+    {
+      "name": "supabase-static",
+      "urls": ["https://uwjajsukgdulyvjjeazd.supabase.co/rest/v1/suppliers**", "https://uwjajsukgdulyvjjeazd.supabase.co/rest/v1/app_config**", "https://uwjajsukgdulyvjjeazd.supabase.co/rest/v1/training_examples**"],
+      "cacheConfig": {
+        "maxSize": 50,
+        "maxAge": "24h",
+        "timeout": "5s",
+        "strategy": "performance"
       }
     }
   ]

@@ -46,6 +46,8 @@ export class Dashboard implements AfterViewInit, OnDestroy {
   readonly #queue = inject(QueueService);
   readonly #snackBar = inject(MatSnackBar);
 
+  readonly isMobile = this.#layout.isMobile;
+
   readonly entries = this.#queue.entries;
   readonly logs = this.#queue.logs;
   readonly loading = this.#queue.loading;

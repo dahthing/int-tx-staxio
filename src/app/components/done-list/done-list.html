@@ -56,6 +56,11 @@
           <span class="done-list__col done-list__col--date">
             {{ entry.doc_date ? (entry.doc_date | date:'dd/MM/yyyy') : '—' }}
           </span>
+          <span class="done-list__col done-list__col--meta" aria-hidden="true">
+            <span>{{ entry.supplier ?? '—' }}</span>
+            <span>·</span>
+            <span>{{ entry.doc_date ? (entry.doc_date | date:'dd/MM/yyyy') : '—' }}</span>
+          </span>
           <span class="done-list__col done-list__col--value">
             @if (entry.value !== null) {
               {{ entry.value | number:'1.2-2' }} {{ entry.currency }}
@@ -67,16 +72,18 @@
             {{ entry.dest_path ?? '—' }}
           </span>
           <span class="done-list__badge" aria-label="Estado: tratado">tratado</span>
-          <button
-            mat-icon-button
-            class="done-list__action"
-            [disabled]="movingId() === entry.id"
-            (click)="onMoveFolder(entry)"
-            matTooltip="Mudar pasta"
-            aria-label="Mudar pasta do ficheiro"
-          >
-            <mat-icon>drive_file_move</mat-icon>
-          </button>
+          <div class="done-list__item-actions">
+            <button
+              mat-icon-button
+              class="done-list__action"
+              [disabled]="movingId() === entry.id"
+              (click)="onMoveFolder(entry)"
+              matTooltip="Mudar pasta"
+              aria-label="Mudar pasta do ficheiro"
+            >
+              <mat-icon>drive_file_move</mat-icon>
+            </button>
+          </div>
         </li>
       }
     </ul>

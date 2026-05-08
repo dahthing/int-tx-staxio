@@ -2,6 +2,8 @@
   @if (entries().length === 0) {
     <p class="inbox-list__empty" role="status">Inbox vazia.</p>
   } @else {
+
+    <!-- ===== DESKTOP TABLE ===== -->
     <table class="inbox-list__table" role="table">
       <thead>
         <tr>
@@ -33,9 +35,7 @@
             <td class="inbox-list__cell inbox-list__cell--value">
               @if (entry.value !== null) {
                 {{ entry.value | number:'1.2-2' }} {{ entry.currency }}
-              } @else {
-                —
-              }
+              } @else { — }
             </td>
             <td class="inbox-list__cell">
               <span class="badge badge--{{ entry.status }}" [attr.aria-label]="'Estado: ' + statusLabel[entry.status]">
@@ -47,22 +47,16 @@
             </td>
             <td class="inbox-list__cell inbox-list__cell--actions">
               @if (entry.status === 'pending' || entry.status === 'error') {
-                <button
-                  class="btn btn--sm btn--primary"
-                  type="button"
-                  (click)="move.emit(entry.id)"
-                  [attr.aria-label]="'Mover ' + entry.file_name"
-                >
+                <button class="btn btn--sm btn--primary" type="button"
+                  (click)="$event.stopPropagation(); move.emit(entry.id)"
+                  [attr.aria-label]="'Mover ' + entry.file_name">
                   Mover
                 </button>
               }
               @if (entry.status === 'error' || entry.status === 'manual_review') {
-                <button
-                  class="btn btn--sm btn--ghost"
-                  type="button"
-                  (click)="statusChange.emit({ id: entry.id, status: 'pending' })"
-                  [attr.aria-label]="'Retentar ' + entry.file_name"
-                >
+                <button class="btn btn--sm btn--ghost" type="button"
+                  (click)="$event.stopPropagation(); statusChange.emit({ id: entry.id, status: 'pending' })"
+                  [attr.aria-label]="'Retentar ' + entry.file_name">
                   Retentar
                 </button>
               }
@@ -71,5 +65,66 @@
         }
       </tbody>
     </table>
+
+    <!-- ===== MOBILE CARDS ===== -->
+    <ul class="inbox-list__cards" role="list">
+      @for (entry of entries(); track entry.id) {
+        <li
+          class="inbox-list__card"
+          [class]="'inbox-list__card inbox-list__card--' + entry.status"
+          (click)="edit.emit(entry)"
+          (keydown.enter)="edit.emit(entry)"
+          (keydown.space)="edit.emit(entry)"
+          tabindex="0"
+          [attr.aria-label]="'Editar ' + entry.file_name"
+        >
+          <div class="inbox-list__card-top">
+            <span class="badge badge--{{ entry.status }}">{{ statusLabel[entry.status] }}</span>
+            @if (entry.value !== null) {
+              <span class="inbox-list__card-value">
+                {{ entry.value | number:'1.2-2' }} {{ entry.currency }}
+              </span>
+            }
+          </div>
+
+          <p class="inbox-list__card-name" [title]="entry.file_name">{{ entry.file_name }}</p>
+
+          <div class="inbox-list__card-meta">
+            @if (entry.supplier) { <span>{{ entry.supplier }}</span> }
+            @if (entry.doc_date) { <span>{{ entry.doc_date | date:'dd/MM/yyyy' }}</span> }
+          </div>
+
+          @if (entry.dest_path) {
+            <p class="inbox-list__card-path">{{ entry.dest_path }}</p>
+          }
+
+          @if (entry.error_message) {
+            <p class="inbox-list__card-error">{{ entry.error_message }}</p>
+          }
+
+          <div class="inbox-list__card-actions" (click)="$event.stopPropagation()">
+            @if (entry.status === 'pending' || entry.status === 'error') {
+              <button class="btn btn--sm btn--primary" type="button"
+                (click)="move.emit(entry.id)"
+                [attr.aria-label]="'Mover ' + entry.file_name">
+                <span>Mover</span>
+              </button>
+            }
+            @if (entry.status === 'error' || entry.status === 'manual_review') {
+              <button class="btn btn--sm btn--ghost" type="button"
+                (click)="statusChange.emit({ id: entry.id, status: 'pending' })"
+                [attr.aria-label]="'Retentar ' + entry.file_name">
+                Retentar
+              </button>
+            }
+            <button class="btn btn--sm btn--ghost" type="button"
+              (click)="edit.emit(entry)"
+              [attr.aria-label]="'Editar ' + entry.file_name">
+              Editar
+            </button>
+          </div>
+        </li>
+      }
+    </ul>
   }
 </section>

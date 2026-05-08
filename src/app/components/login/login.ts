@@ -102,12 +102,15 @@ import { AuthService } from '../../services/auth.service';
   `,
   styles: [`
     .login-page {
-      min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
       align-items: center;
       justify-content: center;
       background: var(--stx-background);
-      padding: 1rem;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      padding-left: 1rem;
+      padding-right: 1rem;
     }
 
     .login-card {

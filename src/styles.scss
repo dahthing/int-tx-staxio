@@ -77,8 +77,14 @@ html, body {
     color: var(--stx-error);
     &:hover:not(:disabled) { background: color-mix(in srgb, var(--stx-error) 10%, transparent); }
   }
+  touch-action: manipulation;
+
   &--sm { padding: 0.25rem 0.625rem; font-size: 0.8125rem; }
   &--icon { padding: 0.25rem; width: 2rem; height: 2rem; justify-content: center; }
+
+  @media (max-width: 768px) {
+    &--sm { min-height: 44px; min-width: 44px; }
+  }
   &--danger-ghost {
     background: transparent;
     border-color: transparent;
@@ -133,6 +139,15 @@ html, body {
 @keyframes skeleton-shimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+// ============================================================
+// MOBILE — prevenir zoom automático iOS em inputs
+// ============================================================
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
 }
 
 // ============================================================

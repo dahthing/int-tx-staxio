@@ -2,42 +2,87 @@
   <div class="dashboard__header-inline">
     <h1 class="dashboard__title">Dashboard</h1>
 
-    <div class="dashboard__stats" role="group" aria-label="Estatísticas">
-      <span class="stat-badge stat-badge--pending">{{ pendingCount() }} pendentes</span>
-      <span class="stat-badge stat-badge--error">{{ errorCount() }} erros</span>
-      <span class="stat-badge stat-badge--done">{{ doneCount() }} concluídos</span>
-      <span class="stat-badge">{{ entries().length }} total</span>
-    </div>
+    @if (!isMobile()) {
+      <div class="dashboard__stats" role="group" aria-label="Estatísticas">
+        <span class="stat-badge stat-badge--pending">{{ pendingCount() }} pendentes</span>
+        <span class="stat-badge stat-badge--error">{{ errorCount() }} erros</span>
+        <span class="stat-badge stat-badge--done">{{ doneCount() }} concluídos</span>
+        <span class="stat-badge">{{ entries().length }} total</span>
+      </div>
 
-    <div class="dashboard__actions">
-      <button class="btn btn--ghost btn--sm" type="button" (click)="onClassify()" [disabled]="actionBusy()"
-        aria-label="Classificar novos documentos da inbox">
-        <mat-icon>cloud_download</mat-icon>
-        @if (actionBusy()) { A processar… } @else { Classificar inbox }
-      </button>
-
-      <button class="btn btn--primary btn--sm" type="button" (click)="onMoveAll()"
-        [disabled]="actionBusy() || pendingCount() === 0" aria-label="Mover todos os documentos pendentes">
-        <mat-icon>drive_file_move</mat-icon>
-        Mover todos ({{ pendingCount() }})
-      </button>
-<button class="btn btn--ghost btn--sm" type="button" (click)="toggleLogDrawer()" [attr.aria-expanded]="logDrawerOpen()"
-  aria-controls="log-drawer" aria-label="Ver log de processamento">
-  <mat-icon>receipt_long</mat-icon>
-  Ver logs
-</button>
-    </div>
+      <div class="dashboard__actions">
+        <button class="btn btn--ghost btn--sm" type="button" (click)="onClassify()" [disabled]="actionBusy()"
+          aria-label="Classificar novos documentos da inbox">
+          <mat-icon>cloud_download</mat-icon>
+          @if (actionBusy()) { A processar… } @else { Classificar inbox }
+        </button>
+        <button class="btn btn--primary btn--sm" type="button" (click)="onMoveAll()"
+          [disabled]="actionBusy() || pendingCount() === 0" aria-label="Mover todos os documentos pendentes">
+          <mat-icon>drive_file_move</mat-icon>
+          Mover todos ({{ pendingCount() }})
+        </button>
+        <button class="btn btn--ghost btn--sm" type="button" (click)="toggleLogDrawer()"
+          [attr.aria-expanded]="logDrawerOpen()" aria-controls="log-drawer" aria-label="Ver log de processamento">
+          <mat-icon>receipt_long</mat-icon>
+          Ver logs
+        </button>
+      </div>
+    }
   </div>
-  </ng-template>
+</ng-template>
 
-  <div class="dashboard">
+<div class="dashboard">
+
+  <!-- ====================================================
+       MOBILE HERO (bank-app style)
+       ==================================================== -->
+  @if (isMobile()) {
+    <section class="dashboard__hero" aria-label="Resumo">
+      <div class="dashboard__hero-body">
+        <p class="dashboard__hero-label">Documentos pendentes</p>
+        <span class="dashboard__hero-value" [class.dashboard__hero-value--zero]="pendingCount() === 0">
+          {{ pendingCount() }}
+        </span>
+        <div class="dashboard__hero-meta" role="group" aria-label="Contadores">
+          @if (errorCount() > 0) {
+            <span class="dashboard__hero-chip dashboard__hero-chip--error">
+              <mat-icon>warning</mat-icon>{{ errorCount() }} erros
+            </span>
+          }
+          <span class="dashboard__hero-chip dashboard__hero-chip--done">
+            <mat-icon>check_circle</mat-icon>{{ doneCount() }} ok
+          </span>
+        </div>
+      </div>
+      <div class="dashboard__hero-actions">
+        <button class="dashboard__pill dashboard__pill--primary" type="button"
+          (click)="onMoveAll()" [disabled]="actionBusy() || pendingCount() === 0"
+          aria-label="Mover todos os documentos pendentes">
+          <mat-icon>drive_file_move</mat-icon>
+          Mover todos
+        </button>
+        <button class="dashboard__pill dashboard__pill--ghost" type="button"
+          (click)="onClassify()" [disabled]="actionBusy()"
+          aria-label="Classificar inbox">
+          <mat-icon>cloud_download</mat-icon>
+          Classificar
+        </button>
+        <button class="dashboard__pill dashboard__pill--ghost" type="button"
+          (click)="toggleLogDrawer()" [attr.aria-expanded]="logDrawerOpen()"
+          aria-label="Ver logs">
+          <mat-icon>receipt_long</mat-icon>
+          Logs
+        </button>
+      </div>
+    </section>
+  }
 
   <!-- ====================================================
        STATISTICS
        ==================================================== -->
   <section class="dashboard__statistics" aria-label="Estatísticas">
     <app-stats-cards />
-    @defer (on idle) {
+    @defer (on viewport) {
       <div class="dashboard__charts">
         <app-month-chart />
         <app-month-value-chart />
@@ -45,32 +90,32 @@
       </div>
     } @placeholder {
       <div class="dashboard__skeleton">
-        <div class="skeleton skeleton--row skeleton--full" style="height:240px"></div>
+        <div class="skeleton skeleton--row skeleton--full" style="height:200px"></div>
       </div>
     }
   </section>
 
   <!-- ====================================================
-       BODY
+       QUEUE
        ==================================================== -->
   <section class="dashboard__queue" aria-label="Fila de processamento">
     @if (loading()) {
       <div class="dashboard__skeleton" aria-label="A carregar" aria-busy="true">
         @for (_ of [1,2,3,4,5]; track $index) {
-        <div class="skeleton-row">
-          <div class="skeleton skeleton--text skeleton--w60"></div>
-          <div class="skeleton skeleton--text skeleton--w40"></div>
-          <div class="skeleton skeleton--text skeleton--w40"></div>
-        </div>
+          <div class="skeleton-row">
+            <div class="skeleton skeleton--text skeleton--w60"></div>
+            <div class="skeleton skeleton--text skeleton--w40"></div>
+            <div class="skeleton skeleton--text skeleton--w40"></div>
+          </div>
         }
       </div>
-      } @else if (error()) {
+    } @else if (error()) {
       <div class="empty-state empty-state--error" role="alert">
         <mat-icon class="empty-state__icon">cloud_off</mat-icon>
         <p class="empty-state__title">Erro de ligação</p>
         <p class="empty-state__desc">{{ error() }}</p>
       </div>
-      } @else if (entries().length === 0) {
+    } @else if (entries().length === 0) {
       <div class="empty-state" role="status">
         <mat-icon class="empty-state__icon">inbox</mat-icon>
         <p class="empty-state__title">Inbox vazia</p>
@@ -80,42 +125,72 @@
           Classificar inbox
         </button>
       </div>
-      } @else {
-      <app-inbox-list [entries]="entries()" (move)="onMoveOne($event)" (statusChange)="onStatusChange($event)"
-        (edit)="onEdit($event)" />
-      }
+    } @else {
+      <app-inbox-list [entries]="entries()" (move)="onMoveOne($event)"
+        (statusChange)="onStatusChange($event)" (edit)="onEdit($event)" />
+    }
   </section>
 
-  <!-- DRAWERS OVERLAY -->
+  <!-- ====================================================
+       OVERLAY
+       ==================================================== -->
   @if (logDrawerOpen() || editDrawerOpen()) {
-  <div class="dashboard__drawer-overlay" (click)="logDrawerOpen() ? toggleLogDrawer() : onEditCancelled()"
-    aria-hidden="true"></div>
+    <div class="dashboard__drawer-overlay"
+      (click)="logDrawerOpen() ? toggleLogDrawer() : onEditCancelled()"
+      aria-hidden="true"></div>
   }
 
-  <!-- LOG DRAWER -->
-  <aside id="log-drawer" class="dashboard__log-drawer" [class.dashboard__log-drawer--open]="logDrawerOpen()"
-    role="complementary" aria-label="Log de processamento">
+  <!-- ====================================================
+       LOG DRAWER / BOTTOM SHEET
+       ==================================================== -->
+  <aside id="log-drawer"
+    class="dashboard__log-drawer"
+    [class.dashboard__log-drawer--open]="logDrawerOpen()"
+    [class.dashboard__log-drawer--sheet]="isMobile()"
+    role="complementary"
+    aria-label="Log de processamento"
+  >
     <div class="dashboard__log-drawer-header">
-      <h2 class="dashboard__log-drawer-title">Log de processamento</h2>
-      <button class="btn btn--ghost btn--sm" type="button" (click)="toggleLogDrawer()" aria-label="Fechar log">
-        <mat-icon>close</mat-icon>
-      </button>
+      @if (isMobile()) {
+        <div class="dashboard__sheet-handle" aria-hidden="true"></div>
+      }
+      <div class="dashboard__log-drawer-title-row">
+        <h2 class="dashboard__log-drawer-title">Log de processamento</h2>
+        <button class="btn btn--ghost btn--sm" type="button" (click)="toggleLogDrawer()" aria-label="Fechar log">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
     </div>
     <app-log-viewer [logs]="logs()" />
   </aside>
-<!-- EDIT DRAWER -->
-<aside class="dashboard__log-drawer dashboard__edit-drawer" [class.dashboard__log-drawer--open]="editDrawerOpen()"
-  role="dialog" aria-modal="true" aria-label="Editar metadados">
-  <div class="dashboard__log-drawer-header">
-    <h2 class="dashboard__log-drawer-title">Editar metadados</h2>
-    <button class="btn btn--ghost btn--sm" type="button" (click)="onEditCancelled()" aria-label="Fechar">
-      <mat-icon>close</mat-icon>
-    </button>
-  </div>
-  @if (editingEntry()) {
-  <div class="dashboard__edit-drawer-content">
-    <app-metadata-form [entry]="editingEntry()!" (saved)="onEditSaved()" (cancelled)="onEditCancelled()" />
-  </div>
-  }
-</aside>
+
+  <!-- ====================================================
+       EDIT DRAWER / BOTTOM SHEET
+       ==================================================== -->
+  <aside
+    class="dashboard__log-drawer dashboard__edit-drawer"
+    [class.dashboard__log-drawer--open]="editDrawerOpen()"
+    [class.dashboard__log-drawer--sheet]="isMobile()"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Editar metadados"
+  >
+    <div class="dashboard__log-drawer-header">
+      @if (isMobile()) {
+        <div class="dashboard__sheet-handle" aria-hidden="true"></div>
+      }
+      <div class="dashboard__log-drawer-title-row">
+        <h2 class="dashboard__log-drawer-title">Editar metadados</h2>
+        <button class="btn btn--ghost btn--sm" type="button" (click)="onEditCancelled()" aria-label="Fechar">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    </div>
+    @if (editingEntry()) {
+      <div class="dashboard__edit-drawer-content">
+        <app-metadata-form [entry]="editingEntry()!" (saved)="onEditSaved()" (cancelled)="onEditCancelled()" />
+      </div>
+    }
+  </aside>
+
 </div>

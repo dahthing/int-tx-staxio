@@ -16,6 +16,7 @@ import { QueueService } from '../../services/queue.service';
 import { QueueEntry, ProcessingStatus } from '../../models/queue-entry.model';
 import { SUPABASE_CLIENT } from '../../core/supabase.client';
 import { DriveFolderPicker } from '../drive-folder-picker/drive-folder-picker';
+import { LayoutService } from '../../services/layout.service';
 
 @Component({
   selector: 'app-manual-review',
@@ -39,6 +40,7 @@ export class ManualReview implements OnInit {
   readonly #fb = inject(FormBuilder);
   readonly #snackBar = inject(MatSnackBar);
   readonly #sanitizer = inject(DomSanitizer);
+  readonly #layout = inject(LayoutService);
 
   readonly #actionBusy = signal(false);
   readonly actionBusy = this.#actionBusy.asReadonly();
@@ -50,15 +52,28 @@ export class ManualReview implements OnInit {
   readonly pickerOpen = this.#pickerOpen.asReadonly();
 
   readonly #rootFolderId = signal('');
+  readonly #previewCollapsed = signal(true);
+
+  readonly isMobile = this.#layout.isMobile;
+  readonly previewCollapsed = this.#previewCollapsed.asReadonly();
 
   readonly previewUrl = computed<SafeResourceUrl | null>(() => {
     const id = this.#expandedId();
     if (!id) return null;
     const entry = this.#queue.entries().find(e => e.id === id);
     if (!entry) return null;
+    if (this.isMobile()) return null;
     return this.#sanitizer.bypassSecurityTrustResourceUrl(
       `https://drive.google.com/file/d/${entry.file_id}/preview`
     );
+  });
+
+  readonly driveViewerUrl = computed<string | null>(() => {
+    const id = this.#expandedId();
+    if (!id) return null;
+    const entry = this.#queue.entries().find(e => e.id === id);
+    if (!entry) return null;
+    return `https://drive.google.com/file/d/${entry.file_id}/view`;
   });
 
   readonly items = computed(() =>
@@ -103,12 +118,17 @@ export class ManualReview implements OnInit {
     if (data?.value) this.#rootFolderId.set(data.value);
   }
 
+  togglePreview(): void {
+    this.#previewCollapsed.update(v => !v);
+  }
+
   toggleExpand(entry: QueueEntry): void {
     if (this.#expandedId() === entry.id) {
       this.#expandedId.set(null);
       return;
     }
     this.#expandedId.set(entry.id);
+    this.#previewCollapsed.set(true);
     const myDocTypes = ['invoice_issued', 'receipt_issued', 'quote_issued'];
     this.form.setValue({
       supplier:           entry.supplier ?? '',

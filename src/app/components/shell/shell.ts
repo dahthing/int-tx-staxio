@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  OnDestroy,
   OnInit,
   inject,
   signal,
@@ -13,6 +14,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
+import { filter } from 'rxjs/operators';
 import { LayoutService } from '../../services/layout.service';
 import { QueueService } from '../../services/queue.service';
 import { AuthService } from '../../services/auth.service';
@@ -40,16 +43,18 @@ interface NavItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[attr.data-collapsed]': 'collapsed()' },
 })
-export class Shell implements OnInit {
+export class Shell implements OnInit, OnDestroy {
   readonly #queue = inject(QueueService);
   readonly #layout = inject(LayoutService);
   readonly #snackBar = inject(MatSnackBar);
   readonly #auth = inject(AuthService);
+  readonly #swUpdate = inject(SwUpdate, { optional: true });
 
   readonly collapsed = signal(false);
   readonly pendingCount = this.#queue.pendingCount;
   readonly errorCount = this.#queue.errorCount;
   readonly userEmail = computed(() => this.#auth.user()?.email ?? '');
+  readonly isMobile = this.#layout.isMobile;
 
   readonly headerTemplate = this.#layout.headerTemplate;
   readonly hasPending = computed(() => this.pendingCount() > 0);
@@ -63,28 +68,48 @@ export class Shell implements OnInit {
     { label: 'Definições',icon: 'settings',       route: '/settings' },
   ];
 
-  // Actualiza o título do browser com badge de pendentes
   readonly #titleEffect = effect(() => {
     const count = this.pendingCount();
     document.title = count > 0 ? `(${count}) Staxio` : 'Staxio';
   });
 
+  readonly #visibilityHandler = () => {
+    if (document.visibilityState === 'visible') {
+      this.#queue.subscribeRealtime();
+    }
+  };
+
   async ngOnInit(): Promise<void> {
     await this.#queue.loadAll();
     this.#queue.subscribeRealtime();
+    document.addEventListener('visibilitychange', this.#visibilityHandler);
+    this.#setupSwUpdate();
+  }
+
+  ngOnDestroy(): void {
+    document.removeEventListener('visibilitychange', this.#visibilityHandler);
+  }
+
+  #setupSwUpdate(): void {
+    if (!this.#swUpdate?.isEnabled) return;
+
+    this.#swUpdate.versionUpdates
+      .pipe(filter((e): e is VersionReadyEvent => e.type === 'VERSION_READY'))
+      .subscribe(() => {
+        const ref = this.#snackBar.open('Nova versão disponível', 'Atualizar', {
+          duration: 0,
+          panelClass: ['toast--info'],
+          horizontalPosition: 'end',
+          verticalPosition: 'bottom',
+        });
+        ref.onAction().subscribe(() => document.location.reload());
+      });
+
+    setInterval(() => void this.#swUpdate!.checkForUpdate(), 6 * 60 * 60 * 1000);
   }
 
   toggleSidebar(): void {
     this.collapsed.update(v => !v);
-  }
-
-  showToast(message: string, type: 'success' | 'error' | 'info' = 'info'): void {
-    this.#snackBar.open(message, '✕', {
-      duration: 4000,
-      panelClass: [`toast--${type}`],
-      horizontalPosition: 'end',
-      verticalPosition: 'bottom',
-    });
   }
 
   signOut(): void {

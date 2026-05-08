@@ -50,33 +50,41 @@ import { QueueService } from '../../services/queue.service';
   styles: [`
     .stats-cards {
       display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 1rem;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+
+      @media (min-width: 600px)  { grid-template-columns: repeat(4, 1fr); }
+      @media (min-width: 900px)  { grid-template-columns: repeat(7, 1fr); }
     }
     .stats-card {
       background: var(--stx-surface);
       border: 1px solid var(--stx-border);
       border-radius: var(--stx-radius);
-      padding: 0.75rem 1rem;
+      padding: 0.875rem 1rem;
       display: flex;
       flex-direction: column;
       gap: 0.125rem;
-      &--wide { min-width: 200px; }
+
+      &--wide {
+        @media (max-width: 599px) { grid-column: span 2; }
+      }
+
       &__icon {
         font-size: 18px; width: 18px; height: 18px;
-        margin-bottom: 0.125rem;
+        margin-bottom: 0.25rem;
         &--done    { color: var(--stx-success); }
         &--primary { color: var(--stx-primary); }
         &--error   { color: var(--stx-error); }
         &--warning { color: var(--stx-warning); }
       }
       &__value {
-        font-size: 1.25rem; font-weight: 700; line-height: 1;
+        font-size: 1.375rem; font-weight: 700; line-height: 1;
         font-variant-numeric: tabular-nums;
       }
       &__label {
         font-size: 0.6875rem; color: var(--stx-text-muted);
         text-transform: uppercase; letter-spacing: 0.05em;
+        margin-top: 0.125rem;
       }
     }
   `],
