@@ -21,7 +21,11 @@ const ALLOWED_KEYS = [
   'cron_enabled',
   'inbound_provider',
   'inbound_email',
+  'inbound_signing_secret',
 ] as const;
+
+// Chaves sensíveis — mascaradas no GET (nunca expostas em claro)
+const MASKED_KEYS = new Set(['inbound_signing_secret']);
 
 // Schema PATCH: objecto com chaves permitidas, valores string
 const ConfigPatchSchema = z

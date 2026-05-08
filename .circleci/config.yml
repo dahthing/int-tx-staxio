@@ -169,59 +169,59 @@ jobs:
             rsync -avz --delete -e "ssh -p$SSH_PORT" --progress --partial --human-readable << pipeline.parameters.folder_path_prod >> $SSH_USER@$SSH_HOST:<< pipeline.parameters.server_path_prod >>
 
   # Aplica migrations e faz deploy das Edge Functions no Supabase
-  supabase:
-    docker:
-      - image: << pipeline.parameters.CIRCLE_NODE_VERSION >>
-
-    working_directory: /tmp/workspace
-
-    steps:
-      - attach_workspace:
-          at: /tmp/workspace
-
-      - run:
-          name: Install Supabase CLI
-          command: |
-            curl -fsSL https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz \
-              | tar -xz -C /usr/local/bin supabase
-            supabase --version
-
-      - run:
-          name: Apply DB migrations
-          command: |
-            supabase db push \
-              --db-url "postgresql://postgres:${SUPABASE_DB_PASSWORD}@db.${SUPABASE_PROJECT_ID}.supabase.co:5432/postgres"
-
-      - run:
-          name: Deploy Edge Functions
-          command: |
-            supabase functions deploy \
-              --project-ref $SUPABASE_PROJECT_ID \
-              --no-verify-jwt
+  # supabase:
+  #   docker:
+  #     - image: << pipeline.parameters.CIRCLE_NODE_VERSION >>
+  #
+  #   working_directory: /tmp/workspace
+  #
+  #   steps:
+  #     - attach_workspace:
+  #         at: /tmp/workspace
+  #
+  #     - run:
+  #         name: Install Supabase CLI
+  #         command: |
+  #           curl -fsSL https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz \
+  #             | tar -xz -C /usr/local/bin supabase
+  #           supabase --version
+  #
+  #     - run:
+  #         name: Apply DB migrations
+  #         command: |
+  #           supabase db push \
+  #             --db-url "postgresql://postgres:${SUPABASE_DB_PASSWORD}@db.${SUPABASE_PROJECT_ID}.supabase.co:5432/postgres"
+  #
+  #     - run:
+  #         name: Deploy Edge Functions
+  #         command: |
+  #           supabase functions deploy \
+  #             --project-ref $SUPABASE_PROJECT_ID \
+  #             --no-verify-jwt
 
 workflows:
   version: 2
   "deploy":
     jobs:
       - environment
-      - supabase:
-          requires:
-            - environment
-          filters:
-            branches:
-              only:
-                - main
-                - develop
+      # - supabase:
+      #     requires:
+      #       - environment
+      #     filters:
+      #       branches:
+      #         only:
+      #           - main
+      #           - develop
       - dev:
           requires:
-            - supabase
+            - environment
           filters:
             branches:
               only:
                 - develop
       - build:
           requires:
-            - supabase
+            - environment
           filters:
             branches:
               only:
