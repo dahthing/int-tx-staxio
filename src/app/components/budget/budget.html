@@ -1,8 +1,8 @@
 <div class="budget">
 
-  <!-- ============================================================
+  <!-- ================================================================
        HEADER
-       ============================================================ -->
+       ================================================================ -->
   <header class="budget__header">
     <div class="budget__header-left">
       <h1 class="budget__title">Orçamento {{ selectedYear() }}</h1>
@@ -23,7 +23,6 @@
         }
       </div>
 
-      <!-- Clear button — only shown when data exists for selected year -->
       @if (hasForecastsForYear()) {
         <button class="budget__clear-btn" type="button" (click)="clearYear()"
           [attr.aria-label]="'Limpar previsão ' + selectedYear()">
@@ -32,7 +31,6 @@
         </button>
       }
 
-      <!-- Upload button -->
       <label class="budget__upload-btn" [class.budget__upload-btn--loading]="uploading()" aria-label="Importar Excel de previsão">
         @if (uploading()) {
           <mat-icon>hourglass_empty</mat-icon>
@@ -53,10 +51,21 @@
     </div>
   </header>
 
-  <!-- ============================================================
-       MAIN TABS — Mapa / Comparação
-       ============================================================ -->
+  <!-- ================================================================
+       MAIN TABS
+       ================================================================ -->
   <div class="budget__main-tabs" role="tablist" aria-label="Vista">
+    <button
+      class="budget__main-tab"
+      [class.budget__main-tab--active]="selectedTab() === 'overview'"
+      type="button"
+      role="tab"
+      [attr.aria-selected]="selectedTab() === 'overview'"
+      (click)="selectedTab.set('overview')"
+    >
+      <mat-icon>dashboard</mat-icon>
+      Overview
+    </button>
     <button
       class="budget__main-tab"
       [class.budget__main-tab--active]="selectedTab() === 'map'"
@@ -68,23 +77,12 @@
       <mat-icon>grid_on</mat-icon>
       Mapa
     </button>
-    <button
-      class="budget__main-tab"
-      [class.budget__main-tab--active]="selectedTab() === 'comparison'"
-      type="button"
-      role="tab"
-      [attr.aria-selected]="selectedTab() === 'comparison'"
-      (click)="selectedTab.set('comparison')"
-    >
-      <mat-icon>bar_chart</mat-icon>
-      Comparação
-    </button>
   </div>
 
-  <!-- ============================================================
+  <!-- ================================================================
        BODY
-       ============================================================ -->
-  <div class="budget__body" [class.budget__body--map]="selectedTab() === 'map'">
+       ================================================================ -->
+  <div class="budget__body">
 
     @if (loading()) {
       <div class="budget__skeleton" aria-busy="true" aria-label="A carregar previsões">
@@ -93,335 +91,301 @@
         }
       </div>
 
-    } @else if (selectedTab() === 'map') {
-      <!-- =========================================================
-           MAP TAB
-           ========================================================= -->
-      <div class="budget-map">
-        <div class="budget-map__scroll">
-          <table class="budget-map__table" aria-label="Mapa orçamental">
-            <thead>
-              <tr>
-                <th class="budget-map__th--label" scope="col">Categoria</th>
-                @for (m of months; track m.n) {
-                  <th class="budget-map__th--month" scope="col">{{ m.label }}</th>
-                }
-                <th class="budget-map__th--total" scope="col">Total</th>
-                <th class="budget-map__th--actions" scope="col"></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (section of mapSections; track section.key) {
-                <!-- Section header -->
-                <tr class="budget-map__section-header">
-                  <td [attr.colspan]="15">{{ section.label }}</td>
-                </tr>
+    } @else if (selectedTab() === 'overview') {
 
-                <!-- Data rows -->
-                @for (row of rowsBySection()[section.key] ?? []; track row.category) {
-                  <tr class="budget-map__row">
-                    <td class="budget-map__cell--label">{{ row.category }}</td>
+      <!-- ==============================================================
+           OVERVIEW TAB
+           ============================================================== -->
+      <div class="budget-overview">
 
-                    @for (m of months; track m.n) {
-                      <td class="budget-map__cell"
-                          (click)="startEdit(row.category, m.n)"
-                          [attr.aria-label]="row.category + ' ' + m.label">
-                        @if (editingCell()?.category === row.category && editingCell()?.month === m.n) {
-                          <input
-                            class="budget-map__input"
-                            type="number"
-                            [value]="row.months[m.n]?.value ?? 0"
-                            (blur)="saveCell(row, m.n, $event)"
-                            (keydown.enter)="saveCell(row, m.n, $event)"
-                            (keydown.escape)="startEdit('', 0)"
-                            aria-label="Editar valor"
-                          />
-                        } @else if (cellSaving(row.category, m.n)) {
-                          <span class="budget-map__saving" aria-label="A guardar">…</span>
-                        } @else {
-                          <span class="budget-map__value"
-                                [class.budget-map__value--zero]="!(row.months[m.n]?.value)">
-                            {{ row.months[m.n]?.value ? (row.months[m.n].value | number:'1.0-0') : '' }}
-                          </span>
-                          <span
-                            class="budget-map__dot"
-                            [class.budget-map__dot--paid]="row.months[m.n]?.status === 'paid'"
-                            [class.budget-map__dot--delayed]="row.months[m.n]?.status === 'delayed'"
-                            (click)="cycleStatus(row, m.n, $event)"
-                            [attr.aria-label]="'Estado: ' + (row.months[m.n]?.status ?? 'pending')"
-                            role="button"
-                            tabindex="0"
-                          ></span>
-                        }
-                      </td>
-                    }
-
-                    <td class="budget-map__cell--total">{{ rowTotal(row) | number:'1.0-0' }}</td>
-
-                    <td class="budget-map__cell--actions">
-                      <div class="budget-map__actions" role="group" [attr.aria-label]="'Acções para ' + row.category">
-                        <button
-                          class="budget-map__action-btn budget-map__action-btn--paid"
-                          type="button"
-                          (click)="bulkStatus(row, 'paid', $event)"
-                          title="Marcar todos como pago"
-                          aria-label="Marcar todos como pago"
-                        >✓</button>
-                        <button
-                          class="budget-map__action-btn budget-map__action-btn--delayed"
-                          type="button"
-                          (click)="bulkStatus(row, 'delayed', $event)"
-                          title="Marcar todos como atrasado"
-                          aria-label="Marcar todos como atrasado"
-                        >⚠</button>
-                        <button
-                          class="budget-map__action-btn budget-map__action-btn--delete"
-                          type="button"
-                          (click)="deleteRow(row)"
-                          title="Apagar linha"
-                          aria-label="Apagar linha"
-                        >🗑</button>
-                      </div>
-                    </td>
-                  </tr>
-                }
-
-                <!-- Add row -->
-                @if (addingRow()?.section === section.key) {
-                  <tr class="budget-map__add-form">
-                    <td>
-                      <input
-                        class="budget-map__add-input"
-                        type="text"
-                        placeholder="Nome"
-                        [value]="addingRow()!.name"
-                        (input)="updateAddingRowName($any($event.target).value)"
-                        (keydown.enter)="confirmAddRow()"
-                        (keydown.escape)="cancelAddRow()"
-                        aria-label="Nome da nova linha"
-                      />
-                    </td>
-                    @if (section.key === 'revenue' || section.key === 'people') {
-                      <td>
-                        <input
-                          class="budget-map__add-input"
-                          type="text"
-                          placeholder="Owner (opcional)"
-                          [value]="addingRow()!.owner"
-                          (input)="updateAddingRowOwner($any($event.target).value)"
-                          (keydown.enter)="confirmAddRow()"
-                          (keydown.escape)="cancelAddRow()"
-                          aria-label="Owner"
-                        />
-                      </td>
-                    } @else {
-                      <td></td>
-                    }
-                    <td [attr.colspan]="13" class="budget-map__add-form-actions">
-                      <button class="budget-map__add-confirm" type="button" (click)="confirmAddRow()" aria-label="Confirmar">✓ Adicionar</button>
-                      <button class="budget-map__add-cancel" type="button" (click)="cancelAddRow()" aria-label="Cancelar">✕ Cancelar</button>
-                    </td>
-                  </tr>
-                }
-
-                <tr class="budget-map__add-row">
-                  <td [attr.colspan]="15">
-                    <button type="button" (click)="startAddRow(section.key)">+ Adicionar {{ section.addLabel }}</button>
-                  </td>
-                </tr>
-
-                <!-- Subtotal -->
-                <tr class="budget-map__subtotal">
-                  <td>Subtotal</td>
-                  @for (m of months; track m.n) {
-                    <td>{{ (subtotals()[section.key]?.[m.n] ?? 0) | number:'1.0-0' }}</td>
-                  }
-                  <td>{{ sectionTotal(section.key) | number:'1.0-0' }}</td>
-                  <td></td>
-                </tr>
-              }
-
-              <!-- Result row -->
-              <tr class="budget-map__result">
-                <td>Resultado Líquido</td>
-                @for (m of months; track m.n) {
-                  <td
-                    [class.budget-map__result--positive]="netByMonth()[m.n] >= 0"
-                    [class.budget-map__result--negative]="netByMonth()[m.n] < 0"
-                  >{{ netByMonth()[m.n] | number:'1.0-0' }}</td>
-                }
-                <td
-                  [class.budget-map__result--positive]="netTotal() >= 0"
-                  [class.budget-map__result--negative]="netTotal() < 0"
-                >{{ netTotal() | number:'1.0-0' }}</td>
-                <td></td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- KPI row -->
+        <div class="budget-kpis" role="region" aria-label="Indicadores chave">
+          <div class="budget-kpi budget-kpi--revenue">
+            <span class="budget-kpi__label">Receitas</span>
+            <span class="budget-kpi__value">{{ formatCurrency(totalReceitas()) }}</span>
+            <span class="budget-kpi__sub">{{ rowsBySection()['revenue']?.length ?? 0 }} clientes</span>
+          </div>
+          <div class="budget-kpi budget-kpi--cost">
+            <span class="budget-kpi__label">Custos + Impostos</span>
+            <span class="budget-kpi__value">{{ formatCurrency(totalCustos()) }}</span>
+            <span class="budget-kpi__sub">{{ costRatioPct() }}% das receitas</span>
+          </div>
+          <div class="budget-kpi budget-kpi--people">
+            <span class="budget-kpi__label">Pessoas</span>
+            <span class="budget-kpi__value">{{ formatCurrency(totalPessoas()) }}</span>
+            <span class="budget-kpi__sub">{{ rowsBySection()['people']?.length ?? 0 }} colaboradores</span>
+          </div>
+          <div
+            class="budget-kpi budget-kpi--result"
+            [class.budget-kpi--positive]="resultadoLiquido() >= 0"
+            [class.budget-kpi--negative]="resultadoLiquido() < 0"
+          >
+            <span class="budget-kpi__label">Resultado Líquido</span>
+            <span class="budget-kpi__value budget-kpi__value--hero">{{ formatCurrency(resultadoLiquido()) }}</span>
+            <span class="budget-kpi__sub">margem {{ margem() | number:'1.1-1' }}%</span>
+          </div>
         </div>
-      </div>
 
-    } @else if (!hasForecastsForYear()) {
-      <!-- UPLOAD ZONE -->
-      <div class="budget__upload-zone">
-        <label class="budget__upload-zone-label" aria-label="Importar ficheiro Excel de previsão">
-          <mat-icon class="budget__upload-zone-icon">upload_file</mat-icon>
-          <p class="budget__upload-zone-title">Importar previsão</p>
-          <p class="budget__upload-zone-desc">Arraste ou clique para seleccionar o ficheiro <strong>.xlsx</strong> com a previsão anual</p>
-          <span class="budget__upload-btn budget__upload-btn--outlined" aria-hidden="true">
-            Seleccionar ficheiro
-          </span>
-          <input
-            type="file"
-            accept=".xlsx,.xls"
-            class="budget__file-input"
-            (change)="onFileUpload($event)"
-            [disabled]="uploading()"
-          />
-        </label>
-      </div>
-
-    } @else {
-      <!-- =========================================================
-           COMPARISON TAB
-           ========================================================= -->
-
-      <!-- SECTION TABS -->
-      <div class="budget__tabs" role="tablist" aria-label="Secção">
-        @for (s of sections; track s.value) {
-          <button
-            class="budget__tab"
-            [class.budget__tab--active]="selectedSection() === s.value"
-            type="button"
-            role="tab"
-            [attr.aria-selected]="selectedSection() === s.value"
-            (click)="selectSection(s.value)"
-          >{{ s.label }}</button>
-        }
-      </div>
-
-      <!-- SUMMARY CARDS -->
-      <div class="budget__summary-cards">
-        <div class="budget__summary-card">
-          <span class="budget__summary-label">Total Previsto</span>
-          <span class="budget__summary-value">{{ formatCurrency(summaryTotals().totalForecast) }}</span>
-        </div>
-        <div class="budget__summary-card">
-          <span class="budget__summary-label">Total Real</span>
-          <span class="budget__summary-value">{{ formatCurrency(summaryTotals().totalActual) }}</span>
-        </div>
-        <div class="budget__summary-card" [class.budget__summary-card--danger]="summaryTotals().deviationEur < -1">
-          <span class="budget__summary-label">Desvio €</span>
-          <span class="budget__summary-value">{{ formatCurrency(summaryTotals().deviationEur) }}</span>
-        </div>
-        <div
-          class="budget__summary-card"
-          [class.budget__summary-card--danger]="summaryTotals().deviationPct < -15"
-          [class.budget__summary-card--warning]="summaryTotals().deviationPct < 0 && summaryTotals().deviationPct >= -15"
-        >
-          <span class="budget__summary-label">Desvio %</span>
-          <span class="budget__summary-value">{{ formatPct(summaryTotals().deviationPct) }}</span>
-        </div>
-      </div>
-
-      <!-- MONTHLY BAR CHART -->
-      <section class="budget__section" aria-label="Gráfico mensal">
-        <h2 class="budget__section-title">
-          <mat-icon>bar_chart</mat-icon>
-          Evolução Mensal
-        </h2>
-
-        <div class="budget__chart" role="img" aria-label="Gráfico de barras mensal — previsão vs real">
-          @for (m of monthlyComparison(); track m.month) {
-            <div class="budget__bar-group">
-              <div class="budget__bars">
-                <div
-                  class="budget__bar budget__bar--forecast"
-                  [style.height.%]="barHeight(m.forecast)"
-                  [attr.title]="'Previsto: ' + formatCurrency(m.forecast)"
-                  role="presentation"
-                ></div>
-                <div
-                  class="budget__bar budget__bar--actual"
-                  [style.height.%]="barHeight(m.actual)"
-                  [attr.title]="'Real: ' + formatCurrency(m.actual)"
-                  role="presentation"
-                ></div>
+        <!-- Monthly resultado chart -->
+        <div class="budget-monthly" role="img" aria-label="Gráfico de resultado mensal">
+          <h3 class="budget-monthly__title">Resultado mensal</h3>
+          <div class="budget-monthly__chart">
+            @for (val of resultadoByMonth(); track $index; let i = $index) {
+              <div class="budget-monthly__col">
+                <div class="budget-monthly__bar-wrap">
+                  <div
+                    class="budget-monthly__bar"
+                    [class.budget-monthly__bar--positive]="val >= 0"
+                    [class.budget-monthly__bar--negative]="val < 0"
+                    [style.height.%]="(Math.abs(val) / maxAbsMonthly()) * 100"
+                    [attr.title]="monthLabels[i] + ': ' + formatCurrency(val)"
+                    role="presentation"
+                  ></div>
+                </div>
+                <span class="budget-monthly__label">{{ monthLabels[i] }}</span>
+                <span class="budget-monthly__val" [class.budget-monthly__val--neg]="val < 0">
+                  {{ val >= 0 ? '+' : '' }}{{ (val / 1000) | number:'1.0-1' }}k
+                </span>
               </div>
-              <span class="budget__bar-label">{{ m.monthLabel }}</span>
-              @if (m.forecast > 0) {
-                <span
-                  class="budget__deviation-badge"
-                  [class.budget__deviation-badge--warning]="Math.abs(m.deviation_pct) > 0 && Math.abs(m.deviation_pct) <= 15"
-                  [class.budget__deviation-badge--danger]="Math.abs(m.deviation_pct) > 15"
-                >{{ formatPct(m.deviation_pct) }}</span>
-              }
-            </div>
-          }
+            }
+          </div>
         </div>
 
-        <div class="budget__chart-legend" aria-hidden="true">
-          <span class="budget__legend-dot budget__legend-dot--forecast"></span>
-          <span>Previsto</span>
-          <span class="budget__legend-dot budget__legend-dot--actual"></span>
-          <span>Real</span>
-        </div>
-      </section>
+        <!-- Section breakdown table -->
+        <div class="budget-breakdown">
+          <!-- Section filter pills -->
+          <div class="budget-breakdown__filters" role="group" aria-label="Filtrar por secção">
+            @for (f of sectionFilters; track f.key) {
+              <button
+                class="budget-breakdown__filter"
+                [class.budget-breakdown__filter--active]="sectionFilter() === f.key"
+                type="button"
+                (click)="sectionFilter.set(f.key)"
+                [attr.aria-pressed]="sectionFilter() === f.key"
+              >{{ f.label }}</button>
+            }
+          </div>
 
-      <!-- CATEGORY TABLE -->
-      <section class="budget__section" aria-label="Tabela por categoria">
-        <h2 class="budget__section-title">
-          <mat-icon>table_chart</mat-icon>
-          Por Categoria
-        </h2>
-
-        @if (categoryBreakdown().length === 0) {
-          <p class="budget__empty">Nenhum dado para os filtros seleccionados.</p>
-        } @else {
-          <div class="budget__table-wrapper">
-            <table class="budget__table" aria-label="Previsão por categoria">
+          <div class="budget-breakdown__table-wrap">
+            <table class="budget-breakdown__table" aria-label="Detalhe por categoria">
               <thead>
                 <tr>
                   <th scope="col">Categoria</th>
                   <th scope="col">Owner</th>
                   @for (ml of monthLabels; track ml) {
-                    <th scope="col" class="budget__table-month">{{ ml }}</th>
+                    <th scope="col">{{ ml }}</th>
                   }
-                  <th scope="col" class="budget__table-num">Total Prev.</th>
-                  <th scope="col" class="budget__table-num">Total Real</th>
-                  <th scope="col" class="budget__table-num">Desvio</th>
+                  <th scope="col">Total</th>
                 </tr>
               </thead>
               <tbody>
-                @for (row of categoryBreakdown(); track row.category) {
-                  <tr>
-                    <td class="budget__table-category">{{ row.category }}</td>
-                    <td class="budget__table-owner">{{ row.owner ?? '—' }}</td>
-                    @for (val of row.months; track $index) {
-                      <td class="budget__table-month budget__table-num">
-                        {{ val > 0 ? formatCurrency(val) : '—' }}
-                      </td>
+                @for (row of filteredBreakdownRows(); track row.category) {
+                  <tr
+                    [class.budget-breakdown__row--revenue]="row.section === 'revenue'"
+                    [class.budget-breakdown__row--cost]="row.section === 'cost'"
+                    [class.budget-breakdown__row--people]="row.section === 'people'"
+                    [class.budget-breakdown__row--tax]="row.section === 'tax'"
+                  >
+                    <td class="budget-breakdown__cat">{{ row.category }}</td>
+                    <td class="budget-breakdown__owner">{{ row.owner ?? '—' }}</td>
+                    @for (v of row.monthValues; track $index) {
+                      <td class="budget-breakdown__num">{{ v > 0 ? (v | number:'1.0-0') : '' }}</td>
                     }
-                    <td class="budget__table-num budget__table-total">{{ formatCurrency(row.totalForecast) }}</td>
-                    <td class="budget__table-num">{{ formatCurrency(row.totalActual) }}</td>
-                    <td class="budget__table-num">
-                      @if (row.totalForecast > 0) {
-                        <span
-                          class="budget__deviation"
-                          [class.budget__deviation--warning]="Math.abs(row.deviation_pct) > 0 && Math.abs(row.deviation_pct) <= 15"
-                          [class.budget__deviation--danger]="Math.abs(row.deviation_pct) > 15"
-                        >{{ formatPct(row.deviation_pct) }}</span>
-                      } @else {
-                        <span>—</span>
-                      }
-                    </td>
+                    <td class="budget-breakdown__total">{{ row.total | number:'1.0-0' }}</td>
+                  </tr>
+                }
+                @if (filteredBreakdownRows().length === 0) {
+                  <tr>
+                    <td colspan="15" class="budget-breakdown__empty">Nenhum dado para o filtro seleccionado.</td>
                   </tr>
                 }
               </tbody>
             </table>
           </div>
+        </div>
+
+      </div>
+
+    } @else {
+      <!-- ==============================================================
+           MAP TAB
+           ============================================================== -->
+      <div class="budget-map">
+        @if (!hasForecastsForYear()) {
+          <div class="budget__upload-zone">
+            <label class="budget__upload-zone-label" aria-label="Importar ficheiro Excel de previsão">
+              <mat-icon class="budget__upload-zone-icon">upload_file</mat-icon>
+              <p class="budget__upload-zone-title">Importar previsão</p>
+              <p class="budget__upload-zone-desc">Arraste ou clique para seleccionar o ficheiro <strong>.xlsx</strong> com a previsão anual</p>
+              <span class="budget__upload-btn budget__upload-btn--outlined" aria-hidden="true">Seleccionar ficheiro</span>
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                class="budget__file-input"
+                (change)="onFileUpload($event)"
+                [disabled]="uploading()"
+              />
+            </label>
+          </div>
+        } @else {
+          <div class="budget-map__scroll">
+            <table class="budget-map__table" aria-label="Mapa orçamental">
+              <thead>
+                <tr>
+                  <th class="budget-map__th--label" scope="col">Categoria</th>
+                  @for (m of months; track m.n) {
+                    <th class="budget-map__th--month" scope="col">{{ m.label }}</th>
+                  }
+                  <th class="budget-map__th--total" scope="col">Total</th>
+                  <th class="budget-map__th--actions" scope="col"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (section of mapSections; track section.key) {
+                  <tr class="budget-map__section-header">
+                    <td [attr.colspan]="15">{{ section.label }}</td>
+                  </tr>
+
+                  @for (row of rowsBySection()[section.key] ?? []; track row.category) {
+                    <tr class="budget-map__row">
+                      <td class="budget-map__cell--label">{{ row.category }}</td>
+
+                      @for (m of months; track m.n) {
+                        <td class="budget-map__cell"
+                            (click)="startEdit(row.category, m.n)"
+                            [attr.aria-label]="row.category + ' ' + m.label">
+                          @if (editingCell()?.category === row.category && editingCell()?.month === m.n) {
+                            <input
+                              class="budget-map__input"
+                              type="number"
+                              [value]="row.months[m.n]?.value ?? 0"
+                              (blur)="saveCell(row, m.n, $event)"
+                              (keydown.enter)="saveCell(row, m.n, $event)"
+                              (keydown.escape)="startEdit('', 0)"
+                              aria-label="Editar valor"
+                            />
+                          } @else if (cellSaving(row.category, m.n)) {
+                            <span class="budget-map__saving" aria-label="A guardar">…</span>
+                          } @else {
+                            <span class="budget-map__value"
+                                  [class.budget-map__value--zero]="!(row.months[m.n]?.value)">
+                              {{ row.months[m.n]?.value ? (row.months[m.n].value | number:'1.0-0') : '' }}
+                            </span>
+                            <span
+                              class="budget-map__dot"
+                              [class.budget-map__dot--paid]="row.months[m.n]?.status === 'paid'"
+                              [class.budget-map__dot--delayed]="row.months[m.n]?.status === 'delayed'"
+                              (click)="cycleStatus(row, m.n, $event)"
+                              [attr.aria-label]="'Estado: ' + (row.months[m.n]?.status ?? 'pending')"
+                              role="button"
+                              tabindex="0"
+                            ></span>
+                          }
+                        </td>
+                      }
+
+                      <td class="budget-map__cell--total">{{ rowTotal(row) | number:'1.0-0' }}</td>
+
+                      <td class="budget-map__cell--actions">
+                        <div class="budget-map__actions" role="group" [attr.aria-label]="'Acções para ' + row.category">
+                          <button
+                            class="budget-map__action-btn budget-map__action-btn--paid"
+                            type="button"
+                            (click)="bulkStatus(row, 'paid', $event)"
+                            title="Marcar todos como pago"
+                            aria-label="Marcar todos como pago"
+                          >&#10003;</button>
+                          <button
+                            class="budget-map__action-btn budget-map__action-btn--delayed"
+                            type="button"
+                            (click)="bulkStatus(row, 'delayed', $event)"
+                            title="Marcar todos como atrasado"
+                            aria-label="Marcar todos como atrasado"
+                          >&#9888;</button>
+                          <button
+                            class="budget-map__action-btn budget-map__action-btn--delete"
+                            type="button"
+                            (click)="deleteRow(row)"
+                            title="Apagar linha"
+                            aria-label="Apagar linha"
+                          >&#128465;</button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+
+                  @if (addingRow()?.section === section.key) {
+                    <tr class="budget-map__add-form">
+                      <td>
+                        <input
+                          class="budget-map__add-input"
+                          type="text"
+                          placeholder="Nome"
+                          [value]="addingRow()!.name"
+                          (input)="updateAddingRowName($any($event.target).value)"
+                          (keydown.enter)="confirmAddRow()"
+                          (keydown.escape)="cancelAddRow()"
+                          aria-label="Nome da nova linha"
+                        />
+                      </td>
+                      @if (section.key === 'revenue' || section.key === 'people') {
+                        <td>
+                          <input
+                            class="budget-map__add-input"
+                            type="text"
+                            placeholder="Owner (opcional)"
+                            [value]="addingRow()!.owner"
+                            (input)="updateAddingRowOwner($any($event.target).value)"
+                            (keydown.enter)="confirmAddRow()"
+                            (keydown.escape)="cancelAddRow()"
+                            aria-label="Owner"
+                          />
+                        </td>
+                      } @else {
+                        <td></td>
+                      }
+                      <td [attr.colspan]="13" class="budget-map__add-form-actions">
+                        <button class="budget-map__add-confirm" type="button" (click)="confirmAddRow()" aria-label="Confirmar">&#10003; Adicionar</button>
+                        <button class="budget-map__add-cancel" type="button" (click)="cancelAddRow()" aria-label="Cancelar">&#10005; Cancelar</button>
+                      </td>
+                    </tr>
+                  }
+
+                  <tr class="budget-map__add-row">
+                    <td [attr.colspan]="15">
+                      <button type="button" (click)="startAddRow(section.key)">+ Adicionar {{ section.addLabel }}</button>
+                    </td>
+                  </tr>
+
+                  <tr class="budget-map__subtotal">
+                    <td>Subtotal</td>
+                    @for (m of months; track m.n) {
+                      <td>{{ (subtotals()[section.key]?.[m.n] ?? 0) | number:'1.0-0' }}</td>
+                    }
+                    <td>{{ sectionTotal(section.key) | number:'1.0-0' }}</td>
+                    <td></td>
+                  </tr>
+                }
+
+                <tr class="budget-map__result">
+                  <td>Resultado Líquido</td>
+                  @for (m of months; track m.n) {
+                    <td
+                      [class.budget-map__result--positive]="netByMonth()[m.n] >= 0"
+                      [class.budget-map__result--negative]="netByMonth()[m.n] < 0"
+                    >{{ netByMonth()[m.n] | number:'1.0-0' }}</td>
+                  }
+                  <td
+                    [class.budget-map__result--positive]="netTotal() >= 0"
+                    [class.budget-map__result--negative]="netTotal() < 0"
+                  >{{ netTotal() | number:'1.0-0' }}</td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         }
-      </section>
+      </div>
     }
   </div>
 </div>

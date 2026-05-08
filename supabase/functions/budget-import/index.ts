@@ -11,24 +11,30 @@ const CORS = {
 };
 
 const MONTH_COUNT = 12;
-const SECTIONS = ['revenue', 'cost', 'people'] as const;
-type Section = typeof SECTIONS[number];
 
 interface ForecastRow {
   year: number;
   month: number;
-  section: Section;
+  section: string;
   category: string;
   owner: string | null;
   forecast_value: number;
 }
 
+interface Budget2026Categories {
+  label: string;
+  weight: number;
+  forecast: number;
+  actual: number;
+  variance: number;
+}
+
+const SECTION_AGGREGATES = new Set(['Impostos / Taxas', 'Pessoas']);
+
 function parseSheetYear(sheet: XLSX.WorkSheet, sheetName: string): number {
-  // Try to extract year from sheet name first
   const nameMatch = sheetName.match(/\d{4}/);
   if (nameMatch) return parseInt(nameMatch[0], 10);
 
-  // Fallback: scan first 3 rows for a 4-digit year number
   const range = XLSX.utils.decode_range(sheet['!ref'] ?? 'A1:A1');
   for (let r = range.s.r; r <= Math.min(range.s.r + 2, range.e.r); r++) {
     for (let c = range.s.c; c <= range.e.c; c++) {
@@ -45,21 +51,18 @@ function parseSheet(sheet: XLSX.WorkSheet, year: number): ForecastRow[] {
   const rows: unknown[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
   const result: ForecastRow[] = [];
 
-  let sectionIdx = 0;
   let headerFound = false;
-  // monthOffset: col index where Jan starts (2 for 2025-style, 1 for 2026-style)
   let monthOffset = 2;
-  // categoryCol: col index of the category name
   let categoryCol = 1;
-  // ownerCol: col index of owner (-1 = none)
   let ownerCol = 0;
+  let currentSection = 'revenue';
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i] as unknown[];
 
     if (!headerFound) {
-      // Detect header row: find first row that has "Jan"/"Fev"/"Mar" in col[1] or col[2]
-      const c1 = row[1]; const c2 = row[2];
+      const c1 = row[1];
+      const c2 = row[2];
       if (typeof c1 === 'string' && /^jan/i.test(c1)) {
         // 2026-style: [Category, Jan, Fev, ..., Dez, TOTAL, ...]
         monthOffset = 1;
@@ -76,49 +79,78 @@ function parseSheet(sheet: XLSX.WorkSheet, year: number): ForecastRow[] {
       continue;
     }
 
-    const col0 = row[0];
     const catRaw = row[categoryCol];
+    const catStr = catRaw != null ? String(catRaw).trim() : '';
 
-    const col0Empty = col0 == null || String(col0).trim() === '';
-    const catEmpty  = catRaw == null || String(catRaw).trim() === '';
+    // Skip empty category rows
+    if (!catStr) continue;
 
-    // Detect subtotal row: category cell is empty but numeric values exist in month cols
-    const hasMonthValues = (() => {
-      for (let m = monthOffset; m < monthOffset + MONTH_COUNT; m++) {
-        if (row[m] != null && typeof row[m] === 'number') return true;
-      }
-      return false;
-    })();
+    // Skip numeric categories (subtotal rows)
+    if (typeof catRaw === 'number') continue;
 
-    if (catEmpty) {
-      if (hasMonthValues) sectionIdx++; // subtotal row → next section
+    // Detect section transitions based on known aggregate names
+    if (SECTION_AGGREGATES.has(catStr)) {
+      if (catStr === 'Impostos / Taxas') currentSection = 'tax';
+      else if (catStr === 'Pessoas') currentSection = 'people';
       continue;
     }
 
-    // Skip if category is a number (total/summary row)
-    if (typeof catRaw === 'number') continue;
+    // For 2025: detect subtotal rows (col0=null, col1=null, numeric values)
+    if (monthOffset === 2 && row[0] == null && row[1] == null) {
+      // Subtotal row — advance section
+      if (currentSection === 'revenue') currentSection = 'cost';
+      else if (currentSection === 'cost') currentSection = 'people';
+      continue;
+    }
 
-    const section = SECTIONS[Math.min(sectionIdx, SECTIONS.length - 1)];
-    const category = String(catRaw).trim();
-    const owner = (ownerCol >= 0 && !col0Empty && section === 'revenue')
-      ? String(col0).trim()
-      : null;
+    // Skip header label rows
+    if (catStr === 'Owner' || catStr === 'entrada') continue;
+
+    const section = currentSection;
+    const owner =
+      ownerCol >= 0 &&
+      row[ownerCol] != null &&
+      typeof row[ownerCol] === 'string' &&
+      section === 'revenue'
+        ? String(row[ownerCol]).trim()
+        : null;
 
     // Extract month values
-    let allZero = true;
+    let hasAnyValue = false;
     const monthRows: ForecastRow[] = [];
     for (let m = 0; m < MONTH_COUNT; m++) {
       const raw = row[monthOffset + m];
-      const value = (raw != null && typeof raw === 'number') ? raw : 0;
-      if (value !== 0) allZero = false;
-      monthRows.push({ year, month: m + 1, section, category, owner, forecast_value: value });
+      const value = raw != null && typeof raw === 'number' ? raw : 0;
+      if (value !== 0) hasAnyValue = true;
+      monthRows.push({ year, month: m + 1, section, category: catStr, owner, forecast_value: value });
     }
 
-    // Skip rows where every month is 0 AND row has no data at all
-    if (!allZero) result.push(...monthRows);
+    if (hasAnyValue) result.push(...monthRows);
   }
 
   return result;
+}
+
+function extract2026Categories(sheet: XLSX.WorkSheet): Budget2026Categories[] | null {
+  const rows: unknown[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+  const result: Budget2026Categories[] = [];
+
+  // Side annotations are in cols 14-18, rows 8-11 (0-indexed: rows 7-10)
+  // Labels: Custos Fixo, Custos Variaveis, Impostos, Lucro
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i] as unknown[];
+    const label = row[14];
+    if (typeof label !== 'string') continue;
+    const weight = typeof row[15] === 'number' ? row[15] : null;
+    const forecast = typeof row[16] === 'number' ? row[16] : null;
+    const actual = typeof row[17] === 'number' ? row[17] : null;
+    const variance = typeof row[18] === 'number' ? row[18] : null;
+    if (weight !== null && forecast !== null && actual !== null && variance !== null) {
+      result.push({ label: label.trim(), weight, forecast, actual, variance });
+    }
+  }
+
+  return result.length > 0 ? result : null;
 }
 
 Deno.serve(async (req) => {
@@ -165,6 +197,17 @@ Deno.serve(async (req) => {
       if (rows.length === 0) continue;
 
       years.push(year);
+
+      // Extract 2026 budget category metadata if present
+      if (year === 2026) {
+        const categories = extract2026Categories(sheet);
+        if (categories) {
+          await supabase.from('app_config').upsert(
+            { key: 'budget_2026_categories', value: JSON.stringify(categories) },
+            { onConflict: 'key' }
+          );
+        }
+      }
 
       // Upsert in batches of 200
       const BATCH = 200;

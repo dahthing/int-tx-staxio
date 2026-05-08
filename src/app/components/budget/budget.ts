@@ -26,26 +26,8 @@ export interface BudgetForecast {
   notes: string | null;
 }
 
-type SectionFilter = 'all' | 'revenue' | 'cost' | 'people';
 type MapSection = 'revenue' | 'cost' | 'people' | 'tax' | 'extra';
-type MainTab = 'map' | 'comparison';
-
-interface MonthComparison {
-  month: number;
-  monthLabel: string;
-  forecast: number;
-  actual: number;
-  deviation_pct: number;
-}
-
-interface CategoryBreakdown {
-  category: string;
-  owner: string | null;
-  months: number[];
-  totalForecast: number;
-  totalActual: number;
-  deviation_pct: number;
-}
+type MainTab = 'overview' | 'map';
 
 interface BudgetRow {
   category: string;
@@ -54,14 +36,19 @@ interface BudgetRow {
   months: { [month: number]: { value: number; status: 'pending' | 'paid' | 'delayed' } };
 }
 
+interface BreakdownRow extends BudgetRow {
+  monthValues: number[];
+  total: number;
+}
+
 const MONTH_LABELS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
 const MAP_SECTIONS: { key: MapSection; label: string; addLabel: string }[] = [
-  { key: 'revenue', label: 'Receitas', addLabel: 'receita' },
-  { key: 'cost',    label: 'Custos',   addLabel: 'custo' },
-  { key: 'people',  label: 'Pessoas',  addLabel: 'pessoa' },
-  { key: 'tax',     label: 'Impostos / Taxas', addLabel: 'imposto' },
-  { key: 'extra',   label: 'Extras',   addLabel: 'extra' },
+  { key: 'revenue', label: 'Receitas',          addLabel: 'receita'  },
+  { key: 'cost',    label: 'Custos',             addLabel: 'custo'    },
+  { key: 'people',  label: 'Pessoas',            addLabel: 'pessoa'   },
+  { key: 'tax',     label: 'Impostos / Taxas',   addLabel: 'imposto'  },
+  { key: 'extra',   label: 'Extras',             addLabel: 'extra'    },
 ];
 
 @Component({
@@ -82,17 +69,12 @@ export class Budget implements OnInit {
   readonly #uploading = signal(false);
   readonly #selectedYear = signal(new Date().getFullYear());
 
-  readonly forecasts = this.#forecasts.asReadonly();
   readonly loading = this.#loading.asReadonly();
   readonly uploading = this.#uploading.asReadonly();
   readonly selectedYear = this.#selectedYear.asReadonly();
 
-  // ── comparison tab ───────────────────────────────────────────────────────
-  readonly #selectedSection = signal<SectionFilter>('all');
-  readonly selectedSection = this.#selectedSection.asReadonly();
-
-  // ── main tabs ────────────────────────────────────────────────────────────
-  readonly selectedTab = signal<MainTab>('map');
+  // ── tabs ─────────────────────────────────────────────────────────────────
+  readonly selectedTab = signal<MainTab>('overview');
 
   // ── map tab signals ──────────────────────────────────────────────────────
   readonly #editingCell = signal<{ category: string; month: number } | null>(null);
@@ -100,88 +82,35 @@ export class Budget implements OnInit {
   readonly #addingRow = signal<{ section: MapSection; name: string; owner: string } | null>(null);
 
   readonly editingCell = this.#editingCell.asReadonly();
-  readonly savingCell = this.#savingCell.asReadonly();
   readonly addingRow = this.#addingRow.asReadonly();
 
-  // ── static data ──────────────────────────────────────────────────────────
+  // ── overview: section filter ──────────────────────────────────────────────
+  readonly sectionFilter = signal<string>('all');
+
+  readonly sectionFilters = [
+    { key: 'all',     label: 'Todos'    },
+    { key: 'revenue', label: 'Receitas' },
+    { key: 'cost',    label: 'Custos'   },
+    { key: 'people',  label: 'Pessoas'  },
+    { key: 'tax',     label: 'Impostos' },
+    { key: 'extra',   label: 'Extras'   },
+  ];
+
+  // ── static ────────────────────────────────────────────────────────────────
   readonly months = MONTH_LABELS.map((label, i) => ({ n: i + 1, label }));
   readonly mapSections = MAP_SECTIONS;
+  readonly monthLabels = MONTH_LABELS;
+  readonly Math = Math;
 
+  // ── derived: year list ───────────────────────────────────────────────────
   readonly availableYears = computed(() => {
     const years = [...new Set(this.#forecasts().map(f => f.year))].sort((a, b) => b - a);
     return years.length > 0 ? years : [new Date().getFullYear()];
   });
 
-  readonly filteredForecasts = computed(() => {
-    const year = this.#selectedYear();
-    const section = this.#selectedSection();
-    return this.#forecasts().filter(f =>
-      f.year === year && (section === 'all' || f.section === section)
-    );
-  });
-
   readonly hasForecastsForYear = computed(() =>
     this.#forecasts().some(f => f.year === this.#selectedYear())
   );
-
-  // ── comparison computed ───────────────────────────────────────────────────
-  readonly monthlyComparison = computed((): MonthComparison[] => {
-    const rows = this.filteredForecasts();
-    return Array.from({ length: 12 }, (_, i) => {
-      const month = i + 1;
-      const forecast = rows
-        .filter(f => f.month === month)
-        .reduce((s, f) => s + f.forecast_value, 0);
-      const actual = 0;
-      const deviation_pct = forecast > 0 ? ((actual - forecast) / forecast) * 100 : 0;
-      return { month, monthLabel: MONTH_LABELS[i], forecast, actual, deviation_pct };
-    });
-  });
-
-  readonly maxMonthValue = computed(() => {
-    const vals = this.monthlyComparison().map(m => Math.max(m.forecast, m.actual));
-    return Math.max(...vals, 1);
-  });
-
-  readonly categoryBreakdown = computed((): CategoryBreakdown[] => {
-    const rows = this.filteredForecasts();
-    const map = new Map<string, CategoryBreakdown>();
-
-    for (const row of rows) {
-      const key = `${row.section}::${row.category}`;
-      if (!map.has(key)) {
-        map.set(key, {
-          category: row.category,
-          owner: row.owner,
-          months: Array(12).fill(0),
-          totalForecast: 0,
-          totalActual: 0,
-          deviation_pct: 0,
-        });
-      }
-      const entry = map.get(key)!;
-      entry.months[row.month - 1] = row.forecast_value;
-      entry.totalForecast += row.forecast_value;
-    }
-
-    return [...map.values()].sort((a, b) => b.totalForecast - a.totalForecast);
-  });
-
-  readonly summaryTotals = computed(() => {
-    const rows = this.filteredForecasts();
-    const totalForecast = rows.reduce((s, r) => s + r.forecast_value, 0);
-    const totalActual = 0;
-    const deviationEur = totalActual - totalForecast;
-    const deviationPct = totalForecast > 0 ? (deviationEur / totalForecast) * 100 : 0;
-    return { totalForecast, totalActual, deviationEur, deviationPct };
-  });
-
-  readonly sections: { value: SectionFilter; label: string }[] = [
-    { value: 'all', label: 'Todos' },
-    { value: 'revenue', label: 'Receitas' },
-    { value: 'cost', label: 'Custos' },
-    { value: 'people', label: 'Pessoas' },
-  ];
 
   // ── map computed ──────────────────────────────────────────────────────────
   readonly mapRows = computed((): BudgetRow[] => {
@@ -247,6 +176,65 @@ export class Budget implements OnInit {
     Object.values(this.netByMonth()).reduce((s, v) => s + v, 0)
   );
 
+  // ── overview KPIs ─────────────────────────────────────────────────────────
+  readonly totalReceitas = computed(() => {
+    const year = this.#selectedYear();
+    return this.#forecasts()
+      .filter(f => f.year === year && f.section === 'revenue')
+      .reduce((s, f) => s + f.forecast_value, 0);
+  });
+
+  readonly totalCustos = computed(() => {
+    const year = this.#selectedYear();
+    return this.#forecasts()
+      .filter(f => f.year === year && ['cost', 'tax', 'extra'].includes(f.section))
+      .reduce((s, f) => s + f.forecast_value, 0);
+  });
+
+  readonly totalPessoas = computed(() => {
+    const year = this.#selectedYear();
+    return this.#forecasts()
+      .filter(f => f.year === year && f.section === 'people')
+      .reduce((s, f) => s + f.forecast_value, 0);
+  });
+
+  readonly resultadoLiquido = computed(() =>
+    this.totalReceitas() - this.totalCustos() - this.totalPessoas()
+  );
+
+  readonly margem = computed(() => {
+    const r = this.totalReceitas();
+    return r > 0 ? (this.resultadoLiquido() / r) * 100 : 0;
+  });
+
+  readonly costRatioPct = computed(() => {
+    const r = this.totalReceitas();
+    return r > 0 ? Math.round((this.totalCustos() + this.totalPessoas()) / r * 100) : 0;
+  });
+
+  readonly resultadoByMonth = computed((): number[] => {
+    return Array.from({ length: 12 }, (_, i) => {
+      const m = i + 1;
+      return this.netByMonth()[m] ?? 0;
+    });
+  });
+
+  readonly maxAbsMonthly = computed(() =>
+    Math.max(...this.resultadoByMonth().map(v => Math.abs(v)), 1)
+  );
+
+  // ── overview breakdown ───────────────────────────────────────────────────
+  readonly filteredBreakdownRows = computed((): BreakdownRow[] => {
+    const filter = this.sectionFilter();
+    return this.mapRows()
+      .filter(r => filter === 'all' || r.section === filter)
+      .map(r => ({
+        ...r,
+        monthValues: Array.from({ length: 12 }, (_, i) => r.months[i + 1]?.value ?? 0),
+        total: Object.values(r.months).reduce((s, m) => s + m.value, 0),
+      }));
+  });
+
   // ── lifecycle ─────────────────────────────────────────────────────────────
   async ngOnInit(): Promise<void> {
     await this.#loadForecasts();
@@ -276,7 +264,7 @@ export class Budget implements OnInit {
     }
   }
 
-  // ── comparison methods ────────────────────────────────────────────────────
+  // ── upload ────────────────────────────────────────────────────────────────
   async onFileUpload(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -312,26 +300,27 @@ export class Budget implements OnInit {
     }
   }
 
+  // ── year ──────────────────────────────────────────────────────────────────
   selectYear(year: number): void {
     this.#selectedYear.set(year);
   }
 
-  selectSection(section: SectionFilter): void {
-    this.#selectedSection.set(section);
+  async clearYear(): Promise<void> {
+    const year = this.#selectedYear();
+    if (!confirm(`Apagar todos os dados de previsão de ${year}? Esta acção não pode ser desfeita.`)) return;
+    const { error } = await this.#supabase
+      .from('budget_forecasts')
+      .delete()
+      .eq('year', year);
+    if (error) {
+      this.#snackBar.open('Erro ao limpar previsão', 'Fechar', { duration: 3000 });
+      return;
+    }
+    this.#forecasts.set(this.#forecasts().filter(f => f.year !== year));
+    this.#snackBar.open(`Previsão ${year} apagada`, '✕', { duration: 3000 });
   }
 
-  barHeight(value: number): number {
-    const max = this.maxMonthValue();
-    return max > 0 ? Math.round((value / max) * 100) : 0;
-  }
-
-  deviationClass(pct: number): string {
-    const abs = Math.abs(pct);
-    if (abs <= 0) return 'budget__deviation--neutral';
-    if (abs <= 15) return 'budget__deviation--warning';
-    return 'budget__deviation--danger';
-  }
-
+  // ── formatting ────────────────────────────────────────────────────────────
   formatCurrency(value: number): string {
     return new Intl.NumberFormat('pt-PT', {
       style: 'currency',
@@ -340,14 +329,6 @@ export class Budget implements OnInit {
       maximumFractionDigits: 0,
     }).format(value);
   }
-
-  formatPct(value: number): string {
-    const sign = value > 0 ? '+' : '';
-    return `${sign}${value.toFixed(1)}%`;
-  }
-
-  readonly monthLabels = MONTH_LABELS;
-  readonly Math = Math;
 
   // ── map methods ───────────────────────────────────────────────────────────
   rowTotal(row: BudgetRow): number {
@@ -374,7 +355,6 @@ export class Budget implements OnInit {
     const cellKey = `${row.category}-${month}`;
     this.#editingCell.set(null);
 
-    // Optimistic update
     this.#forecasts.update(prev => prev.map(f => {
       if (f.year === this.#selectedYear() && f.month === month &&
           f.section === row.section && f.category === row.category) {
@@ -416,7 +396,6 @@ export class Budget implements OnInit {
     const current = row.months[month]?.status ?? 'pending';
     const next = current === 'pending' ? 'paid' : current === 'paid' ? 'delayed' : 'pending';
 
-    // Optimistic update
     this.#forecasts.update(prev => prev.map(f => {
       if (f.year === this.#selectedYear() && f.month === month &&
           f.section === row.section && f.category === row.category) {
@@ -441,14 +420,12 @@ export class Budget implements OnInit {
       if (error) throw error;
     } catch (err) {
       this.#snackBar.open('Erro ao actualizar estado', 'Fechar', { duration: 3000 });
-      console.error(err);
     }
   }
 
   async bulkStatus(row: BudgetRow, status: 'paid' | 'delayed', event: Event): Promise<void> {
     event.stopPropagation();
 
-    // Optimistic update
     this.#forecasts.update(prev => prev.map(f => {
       if (f.year === this.#selectedYear() && f.section === row.section && f.category === row.category) {
         return { ...f, status };
@@ -467,7 +444,6 @@ export class Budget implements OnInit {
       if (error) throw error;
     } catch (err) {
       this.#snackBar.open('Erro ao actualizar estados', 'Fechar', { duration: 3000 });
-      console.error(err);
     }
   }
 
@@ -499,7 +475,6 @@ export class Budget implements OnInit {
 
     this.#addingRow.set(null);
 
-    // Optimistic: add 12 empty rows locally
     const newRows: BudgetForecast[] = Array.from({ length: 12 }, (_, i) => ({
       id: `temp-${category}-${i}`,
       year,
@@ -530,10 +505,8 @@ export class Budget implements OnInit {
 
       if (error) throw error;
 
-      // Reload to get real IDs
       await this.#loadForecasts();
     } catch (err) {
-      // Rollback
       this.#forecasts.update(prev =>
         prev.filter(f => !(f.year === year && f.section === section && f.category === category))
       );
@@ -552,7 +525,6 @@ export class Budget implements OnInit {
 
     const year = this.#selectedYear();
 
-    // Optimistic
     this.#forecasts.update(prev =>
       prev.filter(f => !(f.year === year && f.section === row.section && f.category === row.category))
     );
@@ -575,20 +547,5 @@ export class Budget implements OnInit {
 
   cellSaving(category: string, month: number): boolean {
     return this.#savingCell() === `${category}-${month}`;
-  }
-
-  async clearYear(): Promise<void> {
-    const year = this.#selectedYear();
-    if (!confirm(`Apagar todos os dados de previsão de ${year}? Esta acção não pode ser desfeita.`)) return;
-    const { error } = await this.#supabase
-      .from('budget_forecasts')
-      .delete()
-      .eq('year', year);
-    if (error) {
-      this.#snackBar.open('Erro ao limpar previsão', 'Fechar', { duration: 3000 });
-      return;
-    }
-    this.#forecasts.set(this.#forecasts().filter(f => f.year !== year));
-    this.#snackBar.open(`Previsão ${year} apagada`, '✕', { duration: 3000 });
   }
 }
