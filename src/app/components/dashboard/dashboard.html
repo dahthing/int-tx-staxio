@@ -21,6 +21,10 @@
           <mat-icon>drive_file_move</mat-icon>
           Mover todos ({{ pendingCount() }})
         </button>
+        <button class="btn btn--ghost btn--sm" type="button" (click)="exportMonthCSV()" aria-label="Exportar CSV do mês">
+          <mat-icon>download</mat-icon>
+          Exportar mês
+        </button>
         <button class="btn btn--ghost btn--sm" type="button" (click)="toggleLogDrawer()"
           [attr.aria-expanded]="logDrawerOpen()" aria-controls="log-drawer" aria-label="Ver log de processamento">
           <mat-icon>receipt_long</mat-icon>
@@ -73,6 +77,11 @@
           <mat-icon>receipt_long</mat-icon>
           Logs
         </button>
+        <button class="dashboard__pill dashboard__pill--ghost" type="button"
+          (click)="exportMonthCSV()" aria-label="Exportar CSV">
+          <mat-icon>download</mat-icon>
+          CSV
+        </button>
       </div>
     </section>
   }
@@ -94,6 +103,13 @@
       </div>
     }
   </section>
+
+  <!-- ====================================================
+       FINANCE WIDGET
+       ==================================================== -->
+  <div class="dashboard__finance">
+    <app-finance-widget />
+  </div>
 
   <!-- ====================================================
        QUEUE

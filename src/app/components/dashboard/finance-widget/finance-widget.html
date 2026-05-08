@@ -1,0 +1,72 @@
+<section class="finance-widget" aria-label="Resumo financeiro">
+  <h2 class="finance-widget__title">Resumo financeiro</h2>
+
+  <!-- 2×2 summary grid -->
+  <div class="finance-widget__grid" role="group" aria-label="Indicadores financeiros">
+    <div class="finance-widget__cell">
+      <span class="finance-widget__label">Saldo real</span>
+      <span class="finance-widget__value">{{ formatCurrency(lastBalance()) }}</span>
+    </div>
+    <div class="finance-widget__cell">
+      <span class="finance-widget__label">A pagar</span>
+      <span class="finance-widget__value">{{ formatCurrency(unpaidInvoicesTotal()) }}</span>
+    </div>
+    <div class="finance-widget__cell">
+      <span class="finance-widget__label">Saldo projectado</span>
+      <span class="finance-widget__value"
+        [class.finance-widget__value--positive]="(projectedBalance() ?? 0) >= 0"
+        [class.finance-widget__value--negative]="(projectedBalance() ?? 0) < 0">
+        {{ formatCurrency(projectedBalance()) }}
+      </span>
+    </div>
+    <div class="finance-widget__cell">
+      <span class="finance-widget__label">IVA a recuperar</span>
+      <span class="finance-widget__value">{{ formatCurrency(ivaRecuperar()) }}</span>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div class="finance-widget__alerts" aria-label="Alertas">
+    @if (!hasAlerts()) {
+      <div class="finance-widget__empty" role="status">
+        <mat-icon>check_circle</mat-icon>
+        <span>Tudo reconciliado</span>
+      </div>
+    } @else {
+      @if (duplicateSuspects().length > 0) {
+        <div class="finance-widget__alert finance-widget__alert--warning" role="alert">
+          <span class="finance-widget__alert-chip finance-widget__alert-chip--amber">
+            {{ duplicateSuspects().length }} duplicado(s) suspeito(s)
+          </span>
+          <span class="finance-widget__alert-desc">Verificar faturas duplicadas</span>
+        </div>
+      }
+
+      @if (overdueUnpaid().length > 0) {
+        <div class="finance-widget__alert finance-widget__alert--critical" role="alert">
+          <span class="finance-widget__alert-chip finance-widget__alert-chip--red">
+            {{ overdueUnpaid().length }} fatura(s) &gt;30 dias por pagar
+          </span>
+          <span class="finance-widget__alert-desc">Total: {{ formatCurrency(overdueTotal()) }}</span>
+        </div>
+      }
+
+      @if (unreconciledDebits().length > 0) {
+        <div class="finance-widget__alert finance-widget__alert--warning" role="alert">
+          <span class="finance-widget__alert-chip finance-widget__alert-chip--amber">
+            {{ unreconciledDebits().length }} débito(s) sem fatura
+          </span>
+          <ul class="finance-widget__debit-list" aria-label="Débitos não reconciliados">
+            @for (txn of top5Debits(); track txn.id) {
+              <li class="finance-widget__debit-row">
+                <span class="finance-widget__debit-date">{{ txn.txn_date }}</span>
+                <span class="finance-widget__debit-desc">{{ txn.description }}</span>
+                <span class="finance-widget__debit-amount">{{ formatCurrency(txn.amount) }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    }
+  </div>
+</section>

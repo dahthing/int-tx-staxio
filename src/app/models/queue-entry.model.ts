@@ -29,4 +29,6 @@ export interface QueueEntry {
   vat_amount: number | null;
   vat_rate: number | null;
   is_duplicate_suspect: boolean | null;
+  is_paid: boolean | null;
+  payment_date: string | null;
 }

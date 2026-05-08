@@ -23,6 +23,8 @@ interface AppConfig {
   drive_extratos_folder_id: string;
   drive_compras_folder_id: string;
   cron_enabled: string;
+  inbound_provider: string;
+  inbound_email: string;
 }
 
 export interface Supplier {
@@ -60,6 +62,9 @@ export class Settings implements OnInit {
   readonly #testing = signal(false);
   readonly #processing = signal(false);
   readonly #testResult = signal<{ ok: boolean; message: string } | null>(null);
+  readonly #testingInbound = signal(false);
+  readonly #testInboundResult = signal<{ ok: boolean; message: string } | null>(null);
+  readonly #inboundDocsOpen = signal(false);
   readonly #suppliers = signal<Supplier[]>([]);
   readonly #suppliersLoading = signal(false);
   readonly #newSupplierVisible = signal(false);
@@ -69,6 +74,9 @@ export class Settings implements OnInit {
   readonly testing = this.#testing.asReadonly();
   readonly processing = this.#processing.asReadonly();
   readonly testResult = this.#testResult.asReadonly();
+  readonly testingInbound = this.#testingInbound.asReadonly();
+  readonly testInboundResult = this.#testInboundResult.asReadonly();
+  readonly inboundDocsOpen = this.#inboundDocsOpen.asReadonly();
   readonly suppliers = this.#suppliers.asReadonly();
   readonly suppliersLoading = this.#suppliersLoading.asReadonly();
   readonly newSupplierVisible = this.#newSupplierVisible.asReadonly();
@@ -83,6 +91,8 @@ export class Settings implements OnInit {
     drive_extratos_folder_id:       ['', Validators.required],
     drive_compras_folder_id:        ['', Validators.required],
     cron_enabled:                   [true],
+    inbound_provider:               ['resend' as 'resend' | 'sendgrid'],
+    inbound_email:                  ['' as string],
   });
 
   readonly newSupplierForm = this.#fb.nonNullable.group({
@@ -103,6 +113,8 @@ export class Settings implements OnInit {
           drive_extratos_folder_id:       cfg.drive_extratos_folder_id ?? '1Bul9s71rvh0ijYjhKNRF9gMNJ2tFDMpN',
           drive_compras_folder_id:        cfg.drive_compras_folder_id ?? '1G7OOdefj6aod2AHLypzhs-yxettbxEr5',
           cron_enabled:                   cfg.cron_enabled !== 'false',
+          inbound_provider:               (cfg.inbound_provider as 'resend' | 'sendgrid') ?? 'resend',
+          inbound_email:                  cfg.inbound_email ?? '',
         });
         this.#loading.set(false);
       },
@@ -239,6 +251,8 @@ export class Settings implements OnInit {
       drive_extratos_folder_id:       raw.drive_extratos_folder_id,
       drive_compras_folder_id:        raw.drive_compras_folder_id,
       cron_enabled:                   String(raw.cron_enabled),
+      inbound_provider:               raw.inbound_provider,
+      inbound_email:                  raw.inbound_email,
     };
     this.#http.patch<{ updated: string[] }>(this.#configUrl, patch).subscribe({
       next: () => {
@@ -268,6 +282,29 @@ export class Settings implements OnInit {
       error: (err: Error) => {
         this.#testing.set(false);
         this.#testResult.set({ ok: false, message: err.message });
+      },
+    });
+  }
+
+  toggleInboundDocs(): void {
+    this.#inboundDocsOpen.update(v => !v);
+  }
+
+  onTestInbound(): void {
+    this.#testingInbound.set(true);
+    this.#testInboundResult.set(null);
+    const url = `${environment.edgeFunctionsUrl.replace('/config', '')}/inbound-email`;
+    this.#http.post<{ uploaded: number; message?: string; error?: string }>(url, {}).subscribe({
+      next: r => {
+        this.#testingInbound.set(false);
+        this.#testInboundResult.set({
+          ok: true,
+          message: r.message ?? `OK — função acessível (${r.uploaded} uploads)`,
+        });
+      },
+      error: (err: Error) => {
+        this.#testingInbound.set(false);
+        this.#testInboundResult.set({ ok: false, message: err.message });
       },
     });
   }

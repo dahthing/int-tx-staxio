@@ -243,6 +243,188 @@
         </div>
       </section>
 
+      <!-- ====================================================
+           EMAIL INBOUND
+           ==================================================== -->
+      <section class="settings__section">
+        <div class="settings__section-header">
+          <div>
+            <h2 class="settings__section-title">
+              <mat-icon>forward_to_inbox</mat-icon>
+              Email → Drive
+            </h2>
+            <p class="settings__section-desc">
+              Encaminha um email com PDF em anexo e ele aparece automaticamente na inbox Drive.
+            </p>
+          </div>
+          <button class="btn btn--ghost btn--sm" type="button" (click)="toggleInboundDocs()"
+            [attr.aria-expanded]="inboundDocsOpen()">
+            <mat-icon>{{ inboundDocsOpen() ? 'expand_less' : 'menu_book' }}</mat-icon>
+            {{ inboundDocsOpen() ? 'Fechar guia' : 'Ver guia' }}
+          </button>
+        </div>
+
+        <!-- Provider + email -->
+        <div class="settings__fields settings__fields--inbound">
+          <div class="field">
+            <label class="field__label" for="inbound_provider">Provedor</label>
+            <select id="inbound_provider" class="field__input" formControlName="inbound_provider">
+              <option value="resend">Resend (recomendado)</option>
+              <option value="sendgrid">SendGrid</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="inbound_email">Endereço de email</label>
+            <input id="inbound_email" class="field__input" type="email" formControlName="inbound_email"
+              placeholder="documentos@staxio.app" autocomplete="off" />
+            <p class="field__hint">O endereço que vais usar para enviar/encaminhar faturas.</p>
+          </div>
+        </div>
+
+        <!-- Docs accordion -->
+        @if (inboundDocsOpen()) {
+          <div class="inbound-docs" role="region" aria-label="Guia de configuração">
+
+            @if (form.controls.inbound_provider.value === 'resend') {
+              <div class="inbound-docs__provider-badge">
+                <mat-icon>mail</mat-icon> Resend Inbound
+              </div>
+
+              <ol class="inbound-docs__steps">
+                <li class="inbound-docs__step">
+                  <span class="inbound-docs__step-num">1</span>
+                  <div>
+                    <strong>Verificar domínio no Resend</strong>
+                    <p>Resend dashboard → <em>Domains</em> → Add Domain → introduz o teu domínio (ex: <code>staxio.app</code>).</p>
+                    <p>Adiciona os registos DNS mostrados (SPF, DKIM, MX). Com Cloudflare demora &lt;2 min.</p>
+                  </div>
+                </li>
+                <li class="inbound-docs__step">
+                  <span class="inbound-docs__step-num">2</span>
+                  <div>
+                    <strong>Criar rota Inbound no Resend</strong>
+                    <p>Resend dashboard → <em>Inbound</em> → Create Route</p>
+                    <ul>
+                      <li>Email: <code>{{ form.controls.inbound_email.value || 'documentos@staxio.app' }}</code></li>
+                      <li>Webhook URL:</li>
+                    </ul>
+                    <div class="inbound-docs__code">https://uwjajsukgdulyvjjeazd.supabase.co/functions/v1/inbound-email</div>
+                    <p>Copia o <strong>Signing Secret</strong> gerado.</p>
+                  </div>
+                </li>
+                <li class="inbound-docs__step">
+                  <span class="inbound-docs__step-num">3</span>
+                  <div>
+                    <strong>Adicionar secrets no Supabase</strong>
+                    <p>Corre no terminal (dentro do projecto Staxio):</p>
+                    <div class="inbound-docs__code">supabase secrets set INBOUND_PROVIDER=resend
+supabase secrets set INBOUND_SIGNING_SECRET=&lt;signing_secret_do_resend&gt;</div>
+                  </div>
+                </li>
+                <li class="inbound-docs__step">
+                  <span class="inbound-docs__step-num">4</span>
+                  <div>
+                    <strong>Deploy da função</strong>
+                    <div class="inbound-docs__code">supabase functions deploy inbound-email</div>
+                  </div>
+                </li>
+                <li class="inbound-docs__step">
+                  <span class="inbound-docs__step-num">5</span>
+                  <div>
+                    <strong>Guardar definições e testar</strong>
+                    <p>Clica em "Guardar definições" acima e depois usa o botão de teste abaixo.
+                    De seguida, envia um email com um PDF para <code>{{ form.controls.inbound_email.value || 'o endereço configurado' }}</code> e aguarda ~5 minutos.</p>
+                  </div>
+                </li>
+              </ol>
+            }
+
+            @if (form.controls.inbound_provider.value === 'sendgrid') {
+              <div class="inbound-docs__provider-badge inbound-docs__provider-badge--sg">
+                <mat-icon>mail</mat-icon> SendGrid Inbound Parse
+              </div>
+
+              <ol class="inbound-docs__steps">
+                <li class="inbound-docs__step">
+                  <span class="inbound-docs__step-num">1</span>
+                  <div>
+                    <strong>Criar conta SendGrid</strong>
+                    <p>sendgrid.com → plano grátis (100 emails/dia). Não requer cartão de crédito.</p>
+                  </div>
+                </li>
+                <li class="inbound-docs__step">
+                  <span class="inbound-docs__step-num">2</span>
+                  <div>
+                    <strong>Configurar Inbound Parse</strong>
+                    <p>Settings → <em>Inbound Parse</em> → Add Host & URL</p>
+                    <ul>
+                      <li>Receiving Domain: <code>mail.staxio.app</code> (subdomínio do teu domínio)</li>
+                      <li>Destination URL:</li>
+                    </ul>
+                    <div class="inbound-docs__code">https://uwjajsukgdulyvjjeazd.supabase.co/functions/v1/inbound-email</div>
+                    <p>✓ Activa "POST the raw, full MIME message"</p>
+                  </div>
+                </li>
+                <li class="inbound-docs__step">
+                  <span class="inbound-docs__step-num">3</span>
+                  <div>
+                    <strong>Adicionar registo MX no DNS</strong>
+                    <div class="inbound-docs__code">mail.staxio.app  MX  10  mx.sendgrid.net</div>
+                    <p>Substitui <code>mail.staxio.app</code> pelo subdomínio que escolheste.</p>
+                  </div>
+                </li>
+                <li class="inbound-docs__step">
+                  <span class="inbound-docs__step-num">4</span>
+                  <div>
+                    <strong>Adicionar secret no Supabase</strong>
+                    <div class="inbound-docs__code">supabase secrets set INBOUND_PROVIDER=sendgrid</div>
+                  </div>
+                </li>
+                <li class="inbound-docs__step">
+                  <span class="inbound-docs__step-num">5</span>
+                  <div>
+                    <strong>Deploy da função</strong>
+                    <div class="inbound-docs__code">supabase functions deploy inbound-email</div>
+                  </div>
+                </li>
+                <li class="inbound-docs__step">
+                  <span class="inbound-docs__step-num">6</span>
+                  <div>
+                    <strong>Testar</strong>
+                    <p>Envia um email com PDF para <code>{{ form.controls.inbound_email.value || 'o endereço configurado' }}</code>. Em ~5 minutos aparece no dashboard.</p>
+                  </div>
+                </li>
+              </ol>
+            }
+          </div>
+        }
+
+        <!-- Teste -->
+        <div class="settings__action-card settings__action-card--inbound">
+          <div>
+            <p class="settings__action-label">Testar Email Inbound</p>
+            <p class="settings__action-desc">
+              Verifica se a função <code>inbound-email</code> está acessível e ligada à Drive.
+            </p>
+          </div>
+          <button class="btn btn--ghost" type="button" (click)="onTestInbound()"
+            [disabled]="testingInbound()" [attr.aria-busy]="testingInbound()">
+            <mat-icon>science</mat-icon>
+            @if (testingInbound()) { A testar… } @else { Testar }
+          </button>
+        </div>
+
+        @if (testInboundResult()) {
+          <div class="settings__test-result"
+            [class.settings__test-result--ok]="testInboundResult()!.ok"
+            [class.settings__test-result--error]="!testInboundResult()!.ok"
+            role="status">
+            <mat-icon>{{ testInboundResult()!.ok ? 'check_circle' : 'error' }}</mat-icon>
+            {{ testInboundResult()!.message }}
+          </div>
+        }
+      </section>
+
       <!-- ===== FORNECEDORES ===== -->
       <section class="settings__section" aria-labelledby="suppliers-heading">
         <div class="settings__section-header">

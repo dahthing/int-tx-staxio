@@ -15,7 +15,12 @@ const ALLOWED_KEYS = [
   'drive_inbox_folder_id',
   'drive_root_folder_id',
   'drive_internacional_folder_id',
+  'drive_faturas_vendas_folder_id',
+  'drive_extratos_folder_id',
+  'drive_compras_folder_id',
   'cron_enabled',
+  'inbound_provider',
+  'inbound_email',
 ] as const;
 
 // Schema PATCH: objecto com chaves permitidas, valores string

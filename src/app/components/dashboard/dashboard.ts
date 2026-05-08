@@ -21,6 +21,8 @@ import { StatsCards } from '../stats/stats-cards';
 import { MonthChart } from '../stats/month-chart';
 import { MonthValueChart } from '../stats/month-value-chart';
 import { TopSuppliers } from '../stats/top-suppliers';
+import { BankService } from '../../services/bank.service';
+import { FinanceWidget } from './finance-widget/finance-widget';
 
 @Component({
   selector: 'app-dashboard',
@@ -32,6 +34,7 @@ import { TopSuppliers } from '../stats/top-suppliers';
     MonthChart,
     MonthValueChart,
     TopSuppliers,
+    FinanceWidget,
     MatIconModule,
     MatButtonModule,
     MatSnackBarModule,
@@ -44,6 +47,7 @@ export class Dashboard implements AfterViewInit, OnDestroy {
   @ViewChild('dashboardHeader') private headerTpl!: TemplateRef<unknown>;
   readonly #layout = inject(LayoutService);
   readonly #queue = inject(QueueService);
+  readonly #bank = inject(BankService);
   readonly #snackBar = inject(MatSnackBar);
 
   readonly isMobile = this.#layout.isMobile;
@@ -58,6 +62,7 @@ export class Dashboard implements AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     this.#layout.headerTemplate.set(this.headerTpl);
+    void this.#bank.loadAll();
   }
 
   ngOnDestroy(): void {
@@ -152,5 +157,45 @@ export class Dashboard implements AfterViewInit, OnDestroy {
   onEditCancelled(): void {
     this.#editDrawerOpen.set(false);
     setTimeout(() => this.#editingEntry.set(null), 300);
+  }
+
+  exportMonthCSV(): void {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth() + 1;
+
+    const rows = this.entries()
+      .filter(e => {
+        if (!e.doc_date) return false;
+        const [ey, em] = e.doc_date.split('-').map(Number);
+        return ey === y && em === m;
+      })
+      .sort((a, b) => (a.doc_date ?? '').localeCompare(b.doc_date ?? ''));
+
+    const headers = ['Data','Fornecedor','NIF','Tipo','Valor','IVA','Taxa IVA','Pago','Data Pagamento','Ficheiro'];
+    const csvRows = rows.map(e => [
+      e.doc_date ?? '',
+      e.supplier ?? '',
+      e.nif ?? '',
+      e.doc_type ?? '',
+      e.value?.toFixed(2) ?? '',
+      e.vat_amount?.toFixed(2) ?? '',
+      e.vat_rate ? `${e.vat_rate}%` : '',
+      e.is_paid ? 'Sim' : 'Não',
+      e.payment_date ?? '',
+      e.file_name,
+    ]);
+
+    const csv = [headers, ...csvRows]
+      .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';'))
+      .join('\n');
+
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `staxio_${y}-${String(m).padStart(2, '0')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 }
