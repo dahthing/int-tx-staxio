@@ -99,14 +99,10 @@
 
 ## A FAZER
 
-### Fase 10 — Deploy VPS ⏸ STANDBY
-> VPS própria com domínio. Com domínio → substituir pg_cron por Drive Push Webhook.
+### Fase 10 — Deploy VPS ✅ CONCLUÍDO
+> VPS própria em produção: staxio.targx.com. CI/CD via CircleCI (develop → dev, main → prod, rsync SSH).
 
-- [ ] Dockerfile + nginx para Angular
-- [ ] Docker Compose
-- [ ] GitHub Actions: lint + testes + build + deploy SSH
-- [ ] SSL Let's Encrypt
-- [ ] Domínio verificado Google Cloud → webhook
+> pg_cron mantém-se como mecanismo de trigger permanente — agnóstico à fonte de documentos (Drive, Dropbox, filesystem, etc.). Drive Push Webhook descartado.
 
 ---
 

@@ -5,8 +5,11 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "build:dev": "ng build --configuration development",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "functions:deploy": "supabase functions deploy --project-ref uwjajsukgdulyvjjeazd",
+    "db:push": "supabase db push --project-ref uwjajsukgdulyvjjeazd"
   },
   "private": true,
   "packageManager": "pnpm@10.33.0",

@@ -16,6 +16,8 @@
       <div class="picker__loading" role="status" aria-label="A carregar pastas">
         <div class="picker__spinner"></div>
       </div>
+    } @else if (error()) {
+      <p class="picker__error" role="alert">{{ error() }}</p>
     } @else if (children().length === 0) {
       <p class="picker__empty">Sem subpastas</p>
     } @else {

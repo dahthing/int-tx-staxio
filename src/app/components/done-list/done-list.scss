@@ -171,6 +171,8 @@
   }
 
   &__item {
+    display: flex;
+    align-items: stretch;
     background: var(--stx-surface);
     border: 1px solid var(--stx-border);
     border-radius: var(--stx-radius, 6px);
@@ -192,7 +194,8 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem 1rem;
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     background: none;
     border: none;
     cursor: pointer;
@@ -290,12 +293,9 @@
 
   &__item-actions {
     display: flex;
-    justify-content: flex-end;
-    padding: 0 0.5rem 0.25rem;
-
-    @media (min-width: 769px) {
-      padding: 0 0.75rem 0.5rem;
-    }
+    align-items: center;
+    flex-shrink: 0;
+    padding: 0 0.25rem;
   }
 
   &__skeleton {

@@ -35,10 +35,12 @@ export class DriveFolderPicker implements OnInit {
   readonly #stack = signal<Array<{ id: string; name: string }>>([]);
   readonly #children = signal<DriveFolder[]>([]);
   readonly #loading = signal(false);
+  readonly #error = signal<string | null>(null);
 
   readonly stack = this.#stack.asReadonly();
   readonly children = this.#children.asReadonly();
   readonly loading = this.#loading.asReadonly();
+  readonly error = this.#error.asReadonly();
 
   readonly currentId = computed(() => {
     const s = this.#stack();
@@ -81,12 +83,18 @@ export class DriveFolderPicker implements OnInit {
 
   async #load(folderId?: string): Promise<void> {
     this.#loading.set(true);
+    this.#error.set(null);
     this.#drive.listFolders(folderId).subscribe({
       next: folders => {
         this.#children.set(folders);
         this.#loading.set(false);
       },
-      error: () => {
+      error: (err: unknown) => {
+        const msg = err instanceof Error ? err.message
+          : (err as { error?: { message?: string } })?.error?.message
+          ?? (err as { message?: string })?.message
+          ?? 'Erro ao carregar pastas';
+        this.#error.set(msg);
         this.#children.set([]);
         this.#loading.set(false);
       },
