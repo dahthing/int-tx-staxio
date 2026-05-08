@@ -46,64 +46,76 @@ function parseSheet(sheet: XLSX.WorkSheet, year: number): ForecastRow[] {
   const result: ForecastRow[] = [];
 
   let sectionIdx = 0;
-  let headerSkipped = false;
+  let headerFound = false;
+  // monthOffset: col index where Jan starts (2 for 2025-style, 1 for 2026-style)
+  let monthOffset = 2;
+  // categoryCol: col index of the category name
+  let categoryCol = 1;
+  // ownerCol: col index of owner (-1 = none)
+  let ownerCol = 0;
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i] as unknown[];
 
-    const col0 = row[0];
-    const col1 = row[1];
-
-    // Skip until we've passed the header row (which has text like "Jan", "Fev" in month cols)
-    if (!headerSkipped) {
-      // Header row has month labels at cols 2-13
-      const col2 = row[2];
-      if (typeof col2 === 'string' && /jan|fev|mar/i.test(col2)) {
-        headerSkipped = true;
+    if (!headerFound) {
+      // Detect header row: find first row that has "Jan"/"Fev"/"Mar" in col[1] or col[2]
+      const c1 = row[1]; const c2 = row[2];
+      if (typeof c1 === 'string' && /^jan/i.test(c1)) {
+        // 2026-style: [Category, Jan, Fev, ..., Dez, TOTAL, ...]
+        monthOffset = 1;
+        categoryCol = 0;
+        ownerCol = -1;
+        headerFound = true;
+      } else if (typeof c2 === 'string' && /^jan/i.test(c2)) {
+        // 2025-style: [Owner, Category, Jan, Fev, ..., Dez, TOTAL, ...]
+        monthOffset = 2;
+        categoryCol = 1;
+        ownerCol = 0;
+        headerFound = true;
       }
       continue;
     }
 
-    // Check if this is a subtotal/separator row:
-    // col1 is null/empty but some numeric values exist, OR entire row is null
+    const col0 = row[0];
+    const catRaw = row[categoryCol];
+
+    const col0Empty = col0 == null || String(col0).trim() === '';
+    const catEmpty  = catRaw == null || String(catRaw).trim() === '';
+
+    // Detect subtotal row: category cell is empty but numeric values exist in month cols
     const hasMonthValues = (() => {
-      for (let m = 2; m <= 13; m++) {
+      for (let m = monthOffset; m < monthOffset + MONTH_COUNT; m++) {
         if (row[m] != null && typeof row[m] === 'number') return true;
       }
       return false;
     })();
 
-    const col1Empty = col1 == null || String(col1).trim() === '';
-    const col0Empty = col0 == null || String(col0).trim() === '';
-
-    if (col1Empty) {
-      if (hasMonthValues) {
-        // Subtotal row — advance section
-        sectionIdx++;
-      }
-      // Skip this row regardless
+    if (catEmpty) {
+      if (hasMonthValues) sectionIdx++; // subtotal row → next section
       continue;
     }
 
-    if (sectionIdx >= SECTIONS.length) break;
+    // Skip if category is a number (total/summary row)
+    if (typeof catRaw === 'number') continue;
 
-    const section = SECTIONS[sectionIdx];
-    const category = String(col1).trim();
-    const owner = (!col0Empty && section === 'revenue') ? String(col0).trim() : null;
+    const section = SECTIONS[Math.min(sectionIdx, SECTIONS.length - 1)];
+    const category = String(catRaw).trim();
+    const owner = (ownerCol >= 0 && !col0Empty && section === 'revenue')
+      ? String(col0).trim()
+      : null;
 
-    // Extract month values (cols 2..13)
+    // Extract month values
+    let allZero = true;
+    const monthRows: ForecastRow[] = [];
     for (let m = 0; m < MONTH_COUNT; m++) {
-      const raw = row[2 + m];
+      const raw = row[monthOffset + m];
       const value = (raw != null && typeof raw === 'number') ? raw : 0;
-      result.push({
-        year,
-        month: m + 1,
-        section,
-        category,
-        owner,
-        forecast_value: value,
-      });
+      if (value !== 0) allZero = false;
+      monthRows.push({ year, month: m + 1, section, category, owner, forecast_value: value });
     }
+
+    // Skip rows where every month is 0 AND row has no data at all
+    if (!allZero) result.push(...monthRows);
   }
 
   return result;
