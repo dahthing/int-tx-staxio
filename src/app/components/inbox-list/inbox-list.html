@@ -12,6 +12,7 @@
           <th scope="col">Data</th>
           <th scope="col">Valor</th>
           <th scope="col">Estado</th>
+          <th scope="col"><span class="sr-only">Confiança</span></th>
           <th scope="col">Destino</th>
           <th scope="col"><span class="sr-only">Ações</span></th>
         </tr>
@@ -29,6 +30,9 @@
           >
             <td class="inbox-list__cell inbox-list__cell--name" [title]="entry.file_name">
               {{ entry.file_name }}
+              @if (entry.is_duplicate_suspect) {
+                <span class="duplicate-chip" aria-label="Suspeito de duplicado">⚠ duplicado</span>
+              }
             </td>
             <td class="inbox-list__cell">{{ entry.supplier ?? '—' }}</td>
             <td class="inbox-list__cell">{{ entry.doc_date ? (entry.doc_date | date:'dd/MM/yyyy') : '—' }}</td>
@@ -40,6 +44,12 @@
             <td class="inbox-list__cell">
               <span class="badge badge--{{ entry.status }}" [attr.aria-label]="'Estado: ' + statusLabel[entry.status]">
                 {{ statusLabel[entry.status] }}
+              </span>
+            </td>
+            <td class="inbox-list__cell">
+              <span
+                [class]="'confidence-dot confidence-dot--' + confidenceLevel(entry.confidence)"
+                [attr.aria-label]="'Confiança: ' + confidenceLevel(entry.confidence)">
               </span>
             </td>
             <td class="inbox-list__cell inbox-list__cell--path" [title]="entry.dest_path ?? ''">
@@ -80,6 +90,10 @@
         >
           <div class="inbox-list__card-top">
             <span class="badge badge--{{ entry.status }}">{{ statusLabel[entry.status] }}</span>
+            <span
+              [class]="'confidence-dot confidence-dot--' + confidenceLevel(entry.confidence)"
+              [attr.aria-label]="'Confiança: ' + confidenceLevel(entry.confidence)">
+            </span>
             @if (entry.value !== null) {
               <span class="inbox-list__card-value">
                 {{ entry.value | number:'1.2-2' }} {{ entry.currency }}
@@ -87,7 +101,12 @@
             }
           </div>
 
-          <p class="inbox-list__card-name" [title]="entry.file_name">{{ entry.file_name }}</p>
+          <p class="inbox-list__card-name" [title]="entry.file_name">
+            {{ entry.file_name }}
+            @if (entry.is_duplicate_suspect) {
+              <span class="duplicate-chip" aria-label="Suspeito de duplicado">⚠ duplicado</span>
+            }
+          </p>
 
           <div class="inbox-list__card-meta">
             @if (entry.supplier) { <span>{{ entry.supplier }}</span> }

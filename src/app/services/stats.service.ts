@@ -31,7 +31,9 @@ export class StatsService {
   );
 
   readonly totalValue = computed(() =>
-    this.#queue.entries().reduce((s, e) => s + (e.value ?? 0), 0)
+    this.#queue.entries()
+      .filter(e => !e.is_my_doc && !['issued', 'invoice_issued', 'receipt_issued', 'quote_issued'].includes(e.doc_type ?? ''))
+      .reduce((s, e) => s + (e.value ?? 0), 0)
   );
 
   readonly thisMonthDone = computed(() => {
@@ -133,11 +135,50 @@ export class StatsService {
     });
   });
 
+  readonly prevMonthSuppliersValue = computed(() => {
+    const SUPPLIER_TYPES = ['received', 'ecommerce', 'international', 'bank_statement', 'supplies'];
+    const now = new Date();
+    const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const y = d.getFullYear(); const m = d.getMonth() + 1;
+    return this.#queue.entries().filter(e => {
+      if (!e.doc_date || !SUPPLIER_TYPES.includes(e.doc_type ?? '')) return false;
+      const [ey, em] = e.doc_date.split('-').map(Number);
+      return ey === y && em === m;
+    }).reduce((s, e) => s + (e.value ?? 0), 0);
+  });
+
+  readonly prevMonthSalesValue = computed(() => {
+    const now = new Date();
+    const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const y = d.getFullYear(); const m = d.getMonth() + 1;
+    return this.#queue.entries().filter(e => {
+      if (e.doc_type !== 'issued' || !e.doc_date) return false;
+      const [ey, em] = e.doc_date.split('-').map(Number);
+      return ey === y && em === m;
+    }).reduce((s, e) => s + (e.value ?? 0), 0);
+  });
+
+  readonly ivaEstimadoRecuperar = computed(() =>
+    this.#queue.entries()
+      .filter(e => !e.is_my_doc && e.status === 'done' && ['received', 'ecommerce', 'supplies'].includes(e.doc_type ?? ''))
+      .reduce((s, e) => s + (e.vat_amount ?? 0), 0)
+  );
+
+  readonly saldoEstimado = computed(() =>
+    this.thisMonthSalesValue() - this.thisMonthSuppliersValue()
+  );
+
+  readonly duplicateSuspects = computed(() =>
+    this.#queue.entries().filter(e => e.is_duplicate_suspect)
+  );
+
   /** Top 10 fornecedores por nº de documentos */
   readonly topSuppliers = computed((): SupplierVolume[] => {
     const map = new Map<string, { count: number; total: number }>();
+    const EXCLUDED_TYPES = new Set(['issued', 'invoice_issued', 'receipt_issued', 'quote_issued']);
 
     for (const e of this.#queue.entries()) {
+      if (e.is_my_doc || EXCLUDED_TYPES.has(e.doc_type ?? '')) continue;
       const key = e.supplier ?? '(desconhecido)';
       const cur = map.get(key) ?? { count: 0, total: 0 };
       map.set(key, { count: cur.count + 1, total: cur.total + (e.value ?? 0) });

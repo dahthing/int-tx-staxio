@@ -163,7 +163,9 @@ Formato exacto:
   "doc_date": "YYYY-MM-DD ou null",
   "supplier": "nome da empresa emissora ou null",
   "issuerNif": "NIF/VAT do emitente (quem emite a fatura) ou null",
-  "value": número total da fatura (sem símbolo) ou null,
+  "value": número total da fatura COM IVA incluído (sem símbolo) ou null,
+  "vat_amount": valor do IVA em euros ou null,
+  "vat_rate": taxa de IVA em percentagem (ex: 23, 13, 6) ou null,
   "nif": "NIF/VAT do emitente ou null",
   "country": "país do emitente em inglês ou null",
   "currency": "código ISO 4217 (EUR, USD, etc.) ou EUR se não indicado",
@@ -268,7 +270,26 @@ Deno.serve(async (req) => {
           confidence: typeof rawMeta.confidence === 'number' ? rawMeta.confidence : 0.8,
           is_my_doc: rawMeta.is_my_doc === true,
           my_doc_kind: rawMeta.my_doc_kind ?? null,
+          vat_amount: typeof rawMeta.vat_amount === 'number' ? rawMeta.vat_amount : null,
+          vat_rate: typeof rawMeta.vat_rate === 'number' ? rawMeta.vat_rate : null,
         };
+
+        // Detecção de duplicado: mesmo fornecedor + valor ±1€ + data no mesmo mês
+        let isDuplicateSuspect = false;
+        if (meta.supplier && meta.value && meta.doc_date) {
+          const [dy, dm] = meta.doc_date.split('-').map(Number);
+          const { data: similar } = await supabase
+            .from('processing_queue')
+            .select('id')
+            .eq('supplier', meta.supplier)
+            .gte('value', meta.value - 1)
+            .lte('value', meta.value + 1)
+            .gte('doc_date', `${dy}-${String(dm).padStart(2,'0')}-01`)
+            .lte('doc_date', `${dy}-${String(dm).padStart(2,'0')}-31`)
+            .neq('file_id', file.id)
+            .limit(1);
+          isDuplicateSuspect = (similar?.length ?? 0) > 0;
+        }
 
         const payload = buildQueuePayload(file, inboxFolderId, meta, suppliers, folderConfig, companyNif);
 
@@ -300,11 +321,13 @@ Deno.serve(async (req) => {
         // Insere ou actualiza na fila (update se era error, insert se novo)
         if (existing?.status === 'error') {
           await supabase.from('processing_queue')
-            .update({ ...payload, error_message: null })
+            .update({ ...payload, is_duplicate_suspect: isDuplicateSuspect, error_message: null })
             .eq('id', existing.id)
             .throwOnError();
         } else {
-          await supabase.from('processing_queue').insert(payload).throwOnError();
+          await supabase.from('processing_queue')
+            .insert({ ...payload, is_duplicate_suspect: isDuplicateSuspect })
+            .throwOnError();
         }
 
         // Log de sucesso
@@ -313,8 +336,25 @@ Deno.serve(async (req) => {
           file_name: file.name,
           action: 'classify',
           status: 'success',
-          metadata: { ...meta, doc_type: payload.doc_type },
+          metadata: { ...meta, doc_type: payload.doc_type, is_duplicate_suspect: isDuplicateSuspect },
         });
+
+        // Extracção de transacções para extratos bancários
+        if (payload.doc_type === 'bank_statement') {
+          const insertedEntry = existing?.status === 'error'
+            ? existing
+            : (await supabase.from('processing_queue').select('id').eq('file_id', file.id).single()).data;
+          if (insertedEntry?.id) {
+            fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/extract-transactions`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+              },
+              body: JSON.stringify({ queue_id: insertedEntry.id }),
+            }).catch(() => { /* fire and forget */ });
+          }
+        }
 
         queued++;
 

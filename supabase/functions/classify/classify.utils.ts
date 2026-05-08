@@ -313,6 +313,8 @@ export interface ClaudeMeta {
   confidence: number;
   is_my_doc?: boolean;
   my_doc_kind?: string | null;
+  vat_amount?: number | null;
+  vat_rate?: number | null;
 }
 
 export interface QueuePayload {
@@ -335,6 +337,8 @@ export interface QueuePayload {
   dest_quarter: number | null;
   dest_month: string | null;
   is_my_doc: boolean;
+  vat_amount: number | null;
+  vat_rate: number | null;
 }
 
 const MY_DOC_RECEIPT_KEYWORDS = ['recibo'];
@@ -416,5 +420,7 @@ export function buildQueuePayload(
     dest_quarter: parsedDate ? quarter : null,
     dest_month: parsedDate ? resolveMonthPT(month) : null,
     is_my_doc: isMyDoc,
+    vat_amount: meta.vat_amount ?? null,
+    vat_rate: meta.vat_rate ?? null,
   };
 }

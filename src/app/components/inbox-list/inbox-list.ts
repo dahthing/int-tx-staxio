@@ -22,4 +22,11 @@ export class InboxList {
     error: 'Erro',
     manual_review: 'Revisão manual',
   };
+
+  confidenceLevel(c: number | null): 'high' | 'mid' | 'low' {
+    if (c == null) return 'mid';
+    if (c >= 0.85) return 'high';
+    if (c >= 0.6) return 'mid';
+    return 'low';
+  }
 }

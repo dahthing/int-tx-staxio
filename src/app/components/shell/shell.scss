@@ -142,16 +142,7 @@
     gap: 0.25rem;
   }
 
-  &__sidebar-user {
-    font-size: 0.75rem;
-    color: var(--stx-text-muted);
-    padding: 0.25rem 0.5rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  &__collapse-btn {
+&__collapse-btn {
     width: 100%;
     display: flex;
     align-items: center;

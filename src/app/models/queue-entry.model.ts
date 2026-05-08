@@ -25,4 +25,8 @@ export interface QueueEntry {
   created_at: string;
   updated_at: string;
   is_my_doc: boolean | null;
+  confidence: number | null;
+  vat_amount: number | null;
+  vat_rate: number | null;
+  is_duplicate_suspect: boolean | null;
 }
