@@ -1,342 +1,429 @@
 <div class="insights">
-  <!-- ============================================================
-       HEADER
-       ============================================================ -->
+  <!-- ============================================================ HEADER -->
   <header class="insights__header">
     <div>
       <h1 class="insights__title">Cost Intelligence</h1>
-      <p class="insights__subtitle">Análise de custos e oportunidades de redução</p>
+      <p class="insights__subtitle">Sistema de suporte à decisão financeira</p>
+    </div>
+    <div class="insights__year-selector" role="group" aria-label="Seleccionar ano">
+      @for (year of availableYears(); track year) {
+        <button
+          class="insights__year-btn"
+          [class.insights__year-btn--active]="selectedYear() === year"
+          type="button"
+          [attr.aria-pressed]="selectedYear() === year"
+          (click)="selectYear(year)"
+        >{{ year }}</button>
+      }
     </div>
   </header>
 
-  <!-- ============================================================
-       TABS
-       ============================================================ -->
-  <div class="insights__tabs" role="tablist" aria-label="Funcionalidades">
-    <button
-      class="insights__tab"
-      [class.insights__tab--active]="selectedTab() === 'redundancy'"
-      type="button"
-      role="tab"
-      [attr.aria-selected]="selectedTab() === 'redundancy'"
-      (click)="selectTab('redundancy')"
-    >
-      <mat-icon>hub</mat-icon>
-      <span>Redundâncias</span>
+  <!-- ============================================================ TABS -->
+  <div class="insights__tabs" role="tablist" aria-label="Cost Intelligence">
+    <button class="insights__tab" [class.insights__tab--active]="selectedTab() === 'painel'"
+      type="button" role="tab" [attr.aria-selected]="selectedTab() === 'painel'" (click)="selectTab('painel')">
+      <mat-icon>dashboard</mat-icon><span>Painel</span>
     </button>
-    <button
-      class="insights__tab"
-      [class.insights__tab--active]="selectedTab() === 'whatif'"
-      type="button"
-      role="tab"
-      [attr.aria-selected]="selectedTab() === 'whatif'"
-      (click)="selectTab('whatif')"
-    >
-      <mat-icon>tune</mat-icon>
-      <span>E se…?</span>
+    <button class="insights__tab" [class.insights__tab--active]="selectedTab() === 'desvios'"
+      type="button" role="tab" [attr.aria-selected]="selectedTab() === 'desvios'" (click)="selectTab('desvios')">
+      <mat-icon>compare_arrows</mat-icon><span>Desvios</span>
     </button>
-    <button
-      class="insights__tab"
-      [class.insights__tab--active]="selectedTab() === 'benchmark'"
-      type="button"
-      role="tab"
-      [attr.aria-selected]="selectedTab() === 'benchmark'"
-      (click)="selectTab('benchmark')"
-    >
-      <mat-icon>speed</mat-icon>
-      <span>Benchmark</span>
+    <button class="insights__tab" [class.insights__tab--active]="selectedTab() === 'fornecedores'"
+      type="button" role="tab" [attr.aria-selected]="selectedTab() === 'fornecedores'" (click)="selectTab('fornecedores')">
+      <mat-icon>hub</mat-icon><span>Fornecedores</span>
     </button>
-    <button
-      class="insights__tab"
-      [class.insights__tab--active]="selectedTab() === 'trending'"
-      type="button"
-      role="tab"
-      [attr.aria-selected]="selectedTab() === 'trending'"
-      (click)="selectTab('trending')"
-    >
-      <mat-icon>trending_up</mat-icon>
-      <span>Crescentes</span>
+    <button class="insights__tab" [class.insights__tab--active]="selectedTab() === 'optimizer'"
+      type="button" role="tab" [attr.aria-selected]="selectedTab() === 'optimizer'" (click)="selectTab('optimizer')">
+      <mat-icon>tune</mat-icon><span>Optimizer</span>
     </button>
-    <button
-      class="insights__tab"
-      [class.insights__tab--active]="selectedTab() === 'roi'"
-      type="button"
-      role="tab"
-      [attr.aria-selected]="selectedTab() === 'roi'"
-      (click)="selectTab('roi')"
-    >
-      <mat-icon>account_balance</mat-icon>
-      <span>ROI Clientes</span>
+    <button class="insights__tab" [class.insights__tab--active]="selectedTab() === 'alertas'"
+      type="button" role="tab" [attr.aria-selected]="selectedTab() === 'alertas'" (click)="selectTab('alertas')">
+      <mat-icon>notifications_active</mat-icon>
+      <span>Alertas</span>
+      @if (alerts().length > 0) {
+        <span class="insights__tab-badge" aria-label="{{ alerts().length }} alertas">{{ alerts().length }}</span>
+      }
     </button>
   </div>
 
-  <!-- ============================================================
-       TAB A — Redundant supplier analysis
-       ============================================================ -->
-  @if (selectedTab() === 'redundancy') {
-    <div class="insights__body" role="tabpanel" aria-label="Análise de redundâncias">
+  <!-- ============================================================ TAB 1 — PAINEL -->
+  @if (selectedTab() === 'painel') {
+    <div class="insights__body" role="tabpanel" aria-label="Painel de controlo">
 
-      <div class="insights__action-bar">
-        <button
-          class="insights__btn insights__btn--primary"
-          type="button"
-          [disabled]="analysisLoading()"
-          (click)="runAnalysis()"
-          aria-label="Analisar fornecedores com IA"
-        >
-          @if (analysisLoading()) {
-            <span class="insights__spinner" aria-hidden="true"></span>
-            <span>A analisar…</span>
-          } @else {
-            <mat-icon>psychology</mat-icon>
-            <span>Analisar fornecedores</span>
-          }
-        </button>
-
-        @if (analysisResult()?._cachedAt) {
-          <span class="insights__cache-note">
-            <mat-icon>schedule</mat-icon>
-            Cache de {{ analysisResult()!._cachedAt }}
-          </span>
-        }
-      </div>
-
-      @if (analysisError()) {
-        <p class="insights__error" role="alert">{{ analysisError() }}</p>
-      }
-
-      @if (analysisResult()) {
-        <div class="insights__cards-grid">
-
-          <!-- Redundâncias -->
-          <div class="insights__card">
-            <h2 class="insights__card-title">
-              <mat-icon>content_copy</mat-icon>
-              Redundâncias
-            </h2>
-            @if (analysisResult()!.redundancies.length === 0) {
-              <p class="insights__empty">Nenhuma redundância identificada.</p>
-            }
-            @for (r of analysisResult()!.redundancies; track r.category) {
-              <div class="insights__card-item">
-                <p class="insights__card-item-title">{{ r.category }}</p>
-                <p class="insights__card-item-meta">{{ r.suppliers.join(', ') }}</p>
-                <p class="insights__card-item-rec">{{ r.recommendation }}</p>
-                @if (r.potential_saving_eur > 0) {
-                  <span class="insights__saving">Poupança potencial: {{ formatCurrency(r.potential_saving_eur) }}</span>
-                }
-              </div>
-            }
-          </div>
-
-          <!-- Custo elevado -->
-          <div class="insights__card">
-            <h2 class="insights__card-title">
-              <mat-icon>price_change</mat-icon>
-              Custo elevado
-            </h2>
-            @if (analysisResult()!.high_cost.length === 0) {
-              <p class="insights__empty">Nenhum custo elevado identificado.</p>
-            }
-            @for (h of analysisResult()!.high_cost; track h.supplier) {
-              <div class="insights__card-item">
-                <p class="insights__card-item-title">{{ h.supplier }}</p>
-                <p class="insights__card-item-meta">
-                  Atual: {{ formatCurrency(h.current_spend_eur) }} / ano
-                  &nbsp;·&nbsp;
-                  Mercado: {{ formatCurrency(h.market_avg_eur) }} / ano
-                </p>
-                <p class="insights__card-item-rec">{{ h.recommendation }}</p>
-                @if (h.current_spend_eur - h.market_avg_eur > 0) {
-                  <span class="insights__saving">Poupança potencial: {{ formatCurrency(h.current_spend_eur - h.market_avg_eur) }}</span>
-                }
-              </div>
-            }
-          </div>
-
-          <!-- Consolidações -->
-          <div class="insights__card">
-            <h2 class="insights__card-title">
-              <mat-icon>merge</mat-icon>
-              Consolidações
-            </h2>
-            @if (analysisResult()!.consolidations.length === 0) {
-              <p class="insights__empty">Nenhuma consolidação sugerida.</p>
-            }
-            @for (c of analysisResult()!.consolidations; track c.description) {
-              <div class="insights__card-item">
-                <p class="insights__card-item-title">{{ c.description }}</p>
-                <p class="insights__card-item-meta">{{ c.suppliers.join(', ') }}</p>
-                @if (c.estimated_saving_eur > 0) {
-                  <span class="insights__saving">Poupança estimada: {{ formatCurrency(c.estimated_saving_eur) }}</span>
-                }
-              </div>
-            }
-          </div>
-        </div>
-
-        <!-- Summary -->
-        @if (analysisResult()!.summary) {
-          <div class="insights__summary-box">
-            <mat-icon>summarize</mat-icon>
-            <p>{{ analysisResult()!.summary }}</p>
-          </div>
-        }
-      }
-    </div>
-  }
-
-  <!-- ============================================================
-       TAB B — What-if simulator
-       ============================================================ -->
-  @if (selectedTab() === 'whatif') {
-    <div class="insights__body" role="tabpanel" aria-label="Simulador E se">
-
-      @if (whatifLoading()) {
-        <div class="insights__loading" aria-busy="true" aria-label="A carregar fornecedores">
-          <span class="insights__spinner"></span>
-          <span>A carregar…</span>
+      @if (loading()) {
+        <div class="insights__loading" aria-busy="true" aria-label="A carregar dados">
+          <span class="insights__spinner"></span><span>A carregar…</span>
         </div>
       } @else {
 
-        <!-- KPI bar -->
-        <div class="insights__kpi-bar">
-          <div class="insights__kpi">
-            <span class="insights__kpi-label">Poupança anual</span>
-            <span class="insights__kpi-value insights__kpi-value--green">{{ formatCurrency(disabledSavings()) }}</span>
+        <!-- KPI cards -->
+        <div class="ci-kpis">
+          <div class="ci-kpi ci-kpi--green">
+            <span class="ci-kpi__label">Total Receitas</span>
+            <span class="ci-kpi__value">{{ formatCurrency(actualRevenue()) }}</span>
           </div>
-          <div class="insights__kpi">
-            <span class="insights__kpi-label">Resultado mensal atual</span>
-            <span class="insights__kpi-value">{{ formatCurrency(currentMonthlyResult()) }}</span>
+          <div class="ci-kpi ci-kpi--red">
+            <span class="ci-kpi__label">Total Custos</span>
+            <span class="ci-kpi__value">{{ formatCurrency(totalActualCosts()) }}</span>
           </div>
-          <div class="insights__kpi">
-            <span class="insights__kpi-label">Novo resultado mensal</span>
-            <span class="insights__kpi-value insights__kpi-value--green">{{ formatCurrency(simulatedMonthlyResult()) }}</span>
+          <div class="ci-kpi" [class.ci-kpi--green]="actualRevenue() - totalActualCosts() >= 0" [class.ci-kpi--red]="actualRevenue() - totalActualCosts() < 0">
+            <span class="ci-kpi__label">Resultado Líquido</span>
+            <span class="ci-kpi__value">{{ formatCurrency(actualRevenue() - totalActualCosts()) }}</span>
+          </div>
+          <div class="ci-kpi" [class.ci-kpi--green]="actualRevenue() > 0 && ((actualRevenue() - totalActualCosts()) / actualRevenue() * 100) >= 10" [class.ci-kpi--red]="actualRevenue() > 0 && ((actualRevenue() - totalActualCosts()) / actualRevenue() * 100) < 5">
+            <span class="ci-kpi__label">Margem %</span>
+            <span class="ci-kpi__value">
+              @if (actualRevenue() > 0) {
+                {{ ((actualRevenue() - totalActualCosts()) / actualRevenue() * 100).toFixed(1) }}%
+              } @else { —}
+            </span>
           </div>
         </div>
 
-        <div class="insights__whatif-layout">
-          <!-- Supplier toggles -->
-          <div class="insights__supplier-list" aria-label="Lista de fornecedores">
-            <h2 class="insights__section-title">Fornecedores</h2>
-            @for (s of supplierSpends(); track s.name) {
-              <div class="insights__toggle-row">
-                <div>
-                  <p class="insights__toggle-label">{{ s.name }}</p>
-                  <p class="insights__toggle-desc">{{ formatCurrency(s.totalSpend) }} / ano</p>
+        <!-- Waterfall -->
+        <div class="insights__card">
+          <h2 class="insights__card-title"><mat-icon>waterfall_chart</mat-icon> Budget Waterfall</h2>
+          <div class="ci-waterfall">
+            @for (item of waterfallData(); track item.label) {
+              <div class="ci-waterfall__row">
+                <span class="ci-waterfall__label">{{ item.label }}</span>
+                <div class="ci-waterfall__track">
+                  <div class="ci-waterfall__fill"
+                    [style.width.%]="barWidthPct(item.value, actualRevenue() || 1)"
+                    [style.background]="item.color">
+                  </div>
                 </div>
-                <button
-                  class="insights__toggle"
-                  [class.insights__toggle--on]="s.active"
-                  type="button"
-                  role="switch"
-                  [attr.aria-checked]="s.active"
-                  [attr.aria-label]="'Toggle ' + s.name"
-                  (click)="toggleSupplier(s.name)"
-                >
-                  <span class="insights__toggle-knob"></span>
-                </button>
+                <span class="ci-waterfall__val">{{ formatCurrency(item.value) }}</span>
+                <span class="ci-waterfall__pct">{{ item.pct.toFixed(0) }}%</span>
               </div>
             }
           </div>
+        </div>
 
-          <!-- Mini bar chart -->
-          <div class="insights__chart-panel">
-            <h2 class="insights__section-title">Resultado mensal (12 meses)</h2>
-            <div class="insights__bar-chart" role="img" aria-label="Gráfico resultado mensal atual vs simulado">
-              @for (m of chartMonths(); track m.label) {
-                <div class="insights__bar-group">
-                  <div class="insights__bars">
-                    <div
-                      class="insights__bar insights__bar--current"
-                      [style.height.%]="barHeightPct(m.current, chartMax())"
-                      [attr.title]="'Atual: ' + formatCurrency(m.current)"
-                    ></div>
-                    <div
-                      class="insights__bar insights__bar--simulated"
-                      [style.height.%]="barHeightPct(m.simulated, chartMax())"
-                      [attr.title]="'Simulado: ' + formatCurrency(m.simulated)"
-                    ></div>
-                  </div>
-                  <span class="insights__bar-label">{{ m.label }}</span>
+        <!-- Fixed/Variable + Break-even -->
+        <div class="ci-fv-be-grid">
+          <div class="insights__card">
+            <h2 class="insights__card-title"><mat-icon>donut_large</mat-icon> Fixo vs Variável</h2>
+            <div class="ci-fv">
+              <div class="ci-fv__row">
+                <span class="ci-fv__label">Fixo</span>
+                <div class="ci-fv__track">
+                  <div class="ci-fv__fill ci-fv__fill--fixed" [style.width.%]="fixedVariableSplit().fixedPct"></div>
                 </div>
-              }
-            </div>
-            <div class="insights__chart-legend" aria-hidden="true">
-              <span class="insights__legend-dot insights__legend-dot--current"></span><span>Atual</span>
-              <span class="insights__legend-dot insights__legend-dot--simulated"></span><span>Simulado</span>
-            </div>
-
-            <!-- Save scenario -->
-            <div class="insights__scenario-save">
-              <h3 class="insights__section-title">Guardar cenário</h3>
-              <div class="insights__scenario-input-row">
-                <input
-                  class="insights__input"
-                  type="text"
-                  placeholder="Nome do cenário"
-                  [value]="scenarioName()"
-                  (input)="onScenarioNameInput($event)"
-                  aria-label="Nome do cenário"
-                />
-                <button
-                  class="insights__btn insights__btn--secondary"
-                  type="button"
-                  (click)="saveScenario()"
-                >
-                  <mat-icon>save</mat-icon>
-                  <span>Guardar</span>
-                </button>
+                <span class="ci-fv__val">{{ fixedVariableSplit().fixedPct.toFixed(1) }}%</span>
               </div>
+              <div class="ci-fv__row">
+                <span class="ci-fv__label">Variável</span>
+                <div class="ci-fv__track">
+                  <div class="ci-fv__fill ci-fv__fill--variable" [style.width.%]="fixedVariableSplit().variablePct"></div>
+                </div>
+                <span class="ci-fv__val">{{ fixedVariableSplit().variablePct.toFixed(1) }}%</span>
+              </div>
+              <div class="ci-fv__amounts">
+                <span>Fixo: {{ formatCurrency(fixedVariableSplit().fixed) }}</span>
+                <span>Variável: {{ formatCurrency(fixedVariableSplit().variable) }}</span>
+              </div>
+            </div>
+          </div>
 
-              @if (scenarios().length > 0) {
-                <div class="insights__scenarios-list">
-                  <p class="insights__section-title">Cenários guardados</p>
-                  @for (sc of scenarios(); track sc.name) {
-                    <button
-                      class="insights__scenario-pill"
-                      type="button"
-                      (click)="loadScenario(sc)"
-                      [attr.aria-label]="'Carregar cenário ' + sc.name"
-                    >{{ sc.name }}</button>
-                  }
+          <div class="insights__card ci-breakeven">
+            <h2 class="insights__card-title"><mat-icon>analytics</mat-icon> Break-Even</h2>
+            <div class="ci-breakeven__grid">
+              <div class="ci-breakeven__item">
+                <span class="ci-breakeven__item-label">Break-Even Revenue</span>
+                <span class="ci-breakeven__item-val">{{ formatCurrency(breakEven().breakEvenRevenue) }}</span>
+              </div>
+              <div class="ci-breakeven__item">
+                <span class="ci-breakeven__item-label">Margem de Segurança</span>
+                <span class="ci-breakeven__item-val"
+                  [class.ci-text--green]="breakEven().safetyMarginPct >= 20"
+                  [class.ci-text--amber]="breakEven().safetyMarginPct >= 10 && breakEven().safetyMarginPct < 20"
+                  [class.ci-text--red]="breakEven().safetyMarginPct < 10">
+                  {{ breakEven().safetyMarginPct.toFixed(1) }}%
+                </span>
+              </div>
+              <div class="ci-breakeven__item">
+                <span class="ci-breakeven__item-label">Burn Rate Mensal</span>
+                <span class="ci-breakeven__item-val">{{ formatCurrency(breakEven().monthlyBurnRate) }}</span>
+              </div>
+              <div class="ci-breakeven__item">
+                <span class="ci-breakeven__item-label">Coverage Ratio</span>
+                <span class="ci-breakeven__item-val"
+                  [class.ci-text--green]="breakEven().coverageRatio >= 1.2"
+                  [class.ci-text--red]="breakEven().coverageRatio < 1">
+                  {{ breakEven().coverageRatio.toFixed(2) }}x
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Utilization by section -->
+        <div class="insights__card">
+          <h2 class="insights__card-title"><mat-icon>bar_chart</mat-icon> Utilização Orçamental</h2>
+          <div class="ci-utilization">
+            @for (sec of sectionFilters.slice(1); track sec) {
+              @if ((budgetBySection()[sec] ?? 0) > 0) {
+                <div class="ci-utilization__row">
+                  <span class="ci-utilization__label">{{ sec }}</span>
+                  <div class="ci-utilization__track">
+                    <div class="ci-utilization__fill"
+                      [style.width.%]="barWidthPct(budgetBySection()[sec] ?? 0, actualRevenue() || 1)"
+                      [style.background]="sec === 'Receitas' ? '#16a34a' : sec === 'Custos' ? '#2563eb' : sec === 'Pessoas' ? '#7c3aed' : sec === 'Impostos' ? '#d97706' : '#64748b'">
+                    </div>
+                  </div>
+                  <span class="ci-utilization__val">{{ formatCurrency(budgetBySection()[sec] ?? 0) }}</span>
                 </div>
               }
-            </div>
+            }
           </div>
         </div>
       }
     </div>
   }
 
-  <!-- ============================================================
-       TAB C — Benchmark por categoria
-       ============================================================ -->
-  @if (selectedTab() === 'benchmark') {
-    <div class="insights__body" role="tabpanel" aria-label="Benchmark por categoria">
+  <!-- ============================================================ TAB 2 — DESVIOS -->
+  @if (selectedTab() === 'desvios') {
+    <div class="insights__body" role="tabpanel" aria-label="Análise de desvios">
 
-      <p class="insights__desc">
-        Mapeie cada fornecedor a uma categoria de referência para comparar com os benchmarks do mercado português (PME).
-      </p>
+      <!-- Section filter pills -->
+      <div class="ci-pills" role="group" aria-label="Filtrar por secção">
+        @for (sec of sectionFilters; track sec) {
+          <button
+            class="ci-pill"
+            [class.ci-pill--active]="deviationSection() === sec"
+            type="button"
+            (click)="setDeviationSection(sec)"
+          >{{ sec }}</button>
+        }
+      </div>
 
-      <!-- Supplier mapping -->
-      @if (supplierSpends().length > 0) {
-        <div class="insights__card insights__card--full">
-          <h2 class="insights__card-title">
-            <mat-icon>category</mat-icon>
-            Mapeamento de Fornecedores
-          </h2>
+      @if (filteredVarianceRows().length === 0) {
+        <div class="insights__empty-state">
+          <mat-icon>info</mat-icon>
+          <p>Sem dados de desvio para esta secção. Configure o orçamento em Previsão.</p>
+        </div>
+      } @else {
+        <div class="insights__table-wrapper">
+          <table class="insights__table ci-variance" aria-label="Análise de desvios orçamentais">
+            <thead>
+              <tr>
+                <th scope="col">Categoria</th>
+                <th scope="col">Secção</th>
+                <th scope="col" class="insights__table-num">Orçamento</th>
+                <th scope="col" class="insights__table-num">Real</th>
+                <th scope="col" class="insights__table-num">Desvio €</th>
+                <th scope="col" class="insights__table-num">Desvio %</th>
+                <th scope="col" class="insights__table-center">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredVarianceRows(); track row.category) {
+                <tr>
+                  <td>{{ row.category }}</td>
+                  <td><span class="ci-section-tag">{{ row.section }}</span></td>
+                  <td class="insights__table-num">{{ formatCurrency(row.budget) }}</td>
+                  <td class="insights__table-num">{{ formatCurrency(row.actual) }}</td>
+                  <td class="insights__table-num"
+                    [class.ci-text--green]="row.deviationEur <= 0 && row.section !== 'Receitas'"
+                    [class.ci-text--red]="row.deviationEur > 0 && row.section !== 'Receitas'">
+                    {{ formatCurrency(row.deviationEur) }}
+                  </td>
+                  <td class="insights__table-num">{{ formatPct(row.deviationPct) }}</td>
+                  <td class="insights__table-center">
+                    <span class="ci-rag" [class.ci-rag--green]="row.rag === 'green'"
+                      [class.ci-rag--amber]="row.rag === 'amber'" [class.ci-rag--red]="row.rag === 'red'"
+                      [attr.aria-label]="row.rag === 'green' ? 'OK' : row.rag === 'amber' ? 'Atenção' : 'Excedido'">
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ============================================================ TAB 3 — FORNECEDORES -->
+  @if (selectedTab() === 'fornecedores') {
+    <div class="insights__body" role="tabpanel" aria-label="Inteligência de fornecedores">
+
+      <!-- Section A: Concentração -->
+      <div class="insights__card">
+        <h2 class="insights__card-title"><mat-icon>donut_small</mat-icon> Concentração (HHI)</h2>
+        <div class="ci-concentration">
+          <div class="ci-hhi">
+            <span class="ci-hhi__value">{{ supplierConcentration().hhi }}</span>
+            <span class="ci-hhi__label"
+              [class.ci-text--green]="supplierConcentration().level === 'low'"
+              [class.ci-text--amber]="supplierConcentration().level === 'moderate'"
+              [class.ci-text--red]="supplierConcentration().level === 'high'">
+              @if (supplierConcentration().level === 'low') { Concentração Baixa }
+              @else if (supplierConcentration().level === 'moderate') { Concentração Moderada }
+              @else { Concentração Elevada }
+            </span>
+            <span class="ci-hhi__note">HHI &lt; 1000 = baixa · 1000-2500 = moderada · &gt; 2500 = elevada</span>
+          </div>
+
+          <div class="ci-pareto">
+            <p class="insights__section-title">Top fornecedores (Pareto 80%)</p>
+            @for (s of paretoSuppliers(); track s.name) {
+              <div class="ci-pareto-bar">
+                <span class="ci-pareto-bar__name">{{ s.name }}</span>
+                <div class="ci-pareto-bar__track">
+                  <div class="ci-pareto-bar__fill" [style.width.%]="s.share ?? 0"></div>
+                </div>
+                <span class="ci-pareto-bar__pct">{{ (s.share ?? 0).toFixed(1) }}%</span>
+                <span class="ci-pareto-bar__val">{{ formatCurrency(s.totalSpend) }}</span>
+              </div>
+            }
+            @if (paretoSuppliers().length === 0) {
+              <p class="insights__empty">Sem dados de custos para o ano selecionado.</p>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Section B: Análise IA -->
+      <div class="insights__card">
+        <h2 class="insights__card-title"><mat-icon>psychology</mat-icon> Análise IA</h2>
+        <div class="insights__action-bar">
+          <button class="insights__btn insights__btn--primary" type="button"
+            [disabled]="analysisLoading()" (click)="runAnalysis()" aria-label="Analisar fornecedores com IA">
+            @if (analysisLoading()) {
+              <span class="insights__spinner" aria-hidden="true"></span><span>A analisar…</span>
+            } @else {
+              <mat-icon>psychology</mat-icon><span>Analisar fornecedores</span>
+            }
+          </button>
+          @if (analysisResult()?._cachedAt) {
+            <span class="insights__cache-note">
+              <mat-icon>schedule</mat-icon>Cache de {{ analysisResult()!._cachedAt }}
+            </span>
+          }
+        </div>
+        @if (analysisError()) {
+          <p class="insights__error" role="alert">{{ analysisError() }}</p>
+        }
+        @if (analysisResult()) {
+          <div class="insights__cards-grid">
+            <div class="insights__card">
+              <h3 class="insights__card-title"><mat-icon>content_copy</mat-icon> Redundâncias</h3>
+              @for (r of analysisResult()!.redundancies; track r.category) {
+                <div class="insights__card-item">
+                  <p class="insights__card-item-title">{{ r.category }}</p>
+                  <p class="insights__card-item-meta">{{ r.suppliers.join(', ') }}</p>
+                  <p class="insights__card-item-rec">{{ r.recommendation }}</p>
+                  @if (r.potential_saving_eur > 0) {
+                    <span class="insights__saving">{{ formatCurrency(r.potential_saving_eur) }}</span>
+                  }
+                </div>
+              }
+              @if (analysisResult()!.redundancies.length === 0) {
+                <p class="insights__empty">Nenhuma redundância identificada.</p>
+              }
+            </div>
+            <div class="insights__card">
+              <h3 class="insights__card-title"><mat-icon>price_change</mat-icon> Custo elevado</h3>
+              @for (h of analysisResult()!.high_cost; track h.supplier) {
+                <div class="insights__card-item">
+                  <p class="insights__card-item-title">{{ h.supplier }}</p>
+                  <p class="insights__card-item-meta">Atual: {{ formatCurrency(h.current_spend_eur) }} · Mercado: {{ formatCurrency(h.market_avg_eur) }}</p>
+                  <p class="insights__card-item-rec">{{ h.recommendation }}</p>
+                  @if (h.current_spend_eur - h.market_avg_eur > 0) {
+                    <span class="insights__saving">{{ formatCurrency(h.current_spend_eur - h.market_avg_eur) }}</span>
+                  }
+                </div>
+              }
+              @if (analysisResult()!.high_cost.length === 0) {
+                <p class="insights__empty">Nenhum custo elevado identificado.</p>
+              }
+            </div>
+            <div class="insights__card">
+              <h3 class="insights__card-title"><mat-icon>merge</mat-icon> Consolidações</h3>
+              @for (c of analysisResult()!.consolidations; track c.description) {
+                <div class="insights__card-item">
+                  <p class="insights__card-item-title">{{ c.description }}</p>
+                  <p class="insights__card-item-meta">{{ c.suppliers.join(', ') }}</p>
+                  @if (c.estimated_saving_eur > 0) {
+                    <span class="insights__saving">{{ formatCurrency(c.estimated_saving_eur) }}</span>
+                  }
+                </div>
+              }
+              @if (analysisResult()!.consolidations.length === 0) {
+                <p class="insights__empty">Nenhuma consolidação sugerida.</p>
+              }
+            </div>
+          </div>
+          @if (analysisResult()!.summary) {
+            <div class="insights__summary-box">
+              <mat-icon>summarize</mat-icon><p>{{ analysisResult()!.summary }}</p>
+            </div>
+          }
+        }
+      </div>
+
+      <!-- Section C: Crescentes -->
+      <div class="insights__card">
+        <h2 class="insights__card-title"><mat-icon>trending_up</mat-icon> Custos Crescentes</h2>
+        @if (trendingSuppliers().length === 0) {
+          <p class="insights__empty">Sem dados suficientes para os últimos 6 meses.</p>
+        } @else {
+          <div class="insights__table-wrapper">
+            <table class="insights__table" aria-label="Fornecedores com custos crescentes">
+              <thead>
+                <tr>
+                  <th scope="col">Fornecedor</th>
+                  <th scope="col" class="insights__table-num">Média anterior</th>
+                  <th scope="col" class="insights__table-num">Média recente</th>
+                  <th scope="col" class="insights__table-num">Variação</th>
+                  <th scope="col">Acção</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (t of trendingSuppliers(); track t.name) {
+                  <tr>
+                    <td>{{ t.name }}</td>
+                    <td class="insights__table-num">{{ formatCurrency(t.avgPrev) }}</td>
+                    <td class="insights__table-num">{{ formatCurrency(t.avgRecent) }}</td>
+                    <td class="insights__table-num">
+                      <span class="insights__change-badge"
+                        [class.insights__change-badge--warning]="t.changePct > 10 && t.changePct <= 25"
+                        [class.insights__change-badge--danger]="t.changePct > 25">
+                        {{ formatPct(t.changePct) }}
+                      </span>
+                    </td>
+                    <td>
+                      @if (t.changePct > 10) {
+                        <button class="insights__action-pill" type="button"
+                          (click)="openRenegociate(t.name)" [attr.aria-label]="'Renegociar com ' + t.name">
+                          Renegociar
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      <!-- Section D: Benchmark -->
+      <div class="insights__card">
+        <h2 class="insights__card-title"><mat-icon>speed</mat-icon> Benchmark</h2>
+        <p class="insights__desc">Mapeie fornecedores a categorias para comparar com benchmarks portugueses (PME).</p>
+        @if (supplierSpends().length > 0) {
           <div class="insights__mapping-grid">
             @for (s of supplierSpends(); track s.name) {
               <div class="insights__mapping-row">
                 <span class="insights__mapping-name">{{ s.name }}</span>
                 <span class="insights__mapping-spend">{{ formatCurrency(s.totalSpend / 12) }}/mês</span>
-                <select
-                  class="insights__select"
+                <select class="insights__select"
                   [value]="benchmarkMappings()[s.name] || ''"
                   (change)="onBenchmarkMappingChange(s.name, $any($event.target).value)"
-                  [attr.aria-label]="'Categoria para ' + s.name"
-                >
+                  [attr.aria-label]="'Categoria para ' + s.name">
                   <option value="">— sem categoria —</option>
                   @for (cat of benchmarkCategories; track cat) {
                     <option [value]="cat">{{ cat }}</option>
@@ -345,185 +432,237 @@
               </div>
             }
           </div>
-        </div>
-      }
-
-      <!-- Benchmark gauges -->
-      <div class="insights__benchmarks">
-        @for (b of benchmarkRows(); track b.category) {
-          <div class="insights__benchmark-row">
-            <div class="insights__benchmark-header">
-              <span class="insights__benchmark-cat">{{ b.category }}</span>
-              <span class="insights__benchmark-note">{{ b.note }}</span>
-              <span
-                class="insights__benchmark-value"
-                [class.insights__benchmark-value--ok]="b.status === 'ok' && b.monthlyActual > 0"
-                [class.insights__benchmark-value--warning]="b.status === 'warning'"
-                [class.insights__benchmark-value--danger]="b.status === 'danger'"
-              >
-                @if (b.monthlyActual > 0) {
-                  {{ formatCurrency(b.monthlyActual) }}/mês
-                } @else {
-                  não mapeado
-                }
-              </span>
-            </div>
-            <div class="insights__gauge" role="img" [attr.aria-label]="b.category + ': ' + formatCurrency(b.monthlyActual) + ' / mês'">
-              <div class="insights__gauge-range">
-                <span class="insights__gauge-min">{{ formatCurrency(b.min) }}</span>
-                <span class="insights__gauge-max">{{ formatCurrency(b.max) }}</span>
-              </div>
-              <div class="insights__gauge-track">
-                <div class="insights__gauge-zone"></div>
-                @if (b.monthlyActual > 0) {
-                  <div
-                    class="insights__gauge-fill"
-                    [style.width.%]="b.pct"
-                    [class.insights__gauge-fill--ok]="b.status === 'ok'"
-                    [class.insights__gauge-fill--warning]="b.status === 'warning'"
-                    [class.insights__gauge-fill--danger]="b.status === 'danger'"
-                  ></div>
-                }
-              </div>
-              <span class="insights__gauge-unit">{{ b.unit }}</span>
-            </div>
-          </div>
         }
+        <div class="insights__benchmarks">
+          @for (b of benchmarkRows(); track b.category) {
+            <div class="insights__benchmark-row">
+              <div class="insights__benchmark-header">
+                <span class="insights__benchmark-cat">{{ b.category }}</span>
+                <span class="insights__benchmark-note">{{ b.note }}</span>
+                <span class="insights__benchmark-value"
+                  [class.insights__benchmark-value--ok]="b.status === 'ok' && b.monthlyActual > 0"
+                  [class.insights__benchmark-value--warning]="b.status === 'warning'"
+                  [class.insights__benchmark-value--danger]="b.status === 'danger'">
+                  @if (b.monthlyActual > 0) { {{ formatCurrency(b.monthlyActual) }}/mês } @else { não mapeado }
+                </span>
+              </div>
+              <div class="insights__gauge" role="img" [attr.aria-label]="b.category + ': ' + formatCurrency(b.monthlyActual) + ' / mês'">
+                <div class="insights__gauge-range">
+                  <span class="insights__gauge-min">{{ formatCurrency(b.min) }}</span>
+                  <span class="insights__gauge-max">{{ formatCurrency(b.max) }}</span>
+                </div>
+                <div class="insights__gauge-track">
+                  <div class="insights__gauge-zone"></div>
+                  @if (b.monthlyActual > 0) {
+                    <div class="insights__gauge-fill"
+                      [style.width.%]="b.pct"
+                      [class.insights__gauge-fill--ok]="b.status === 'ok'"
+                      [class.insights__gauge-fill--warning]="b.status === 'warning'"
+                      [class.insights__gauge-fill--danger]="b.status === 'danger'">
+                    </div>
+                  }
+                </div>
+                <span class="insights__gauge-unit">{{ b.unit }}</span>
+              </div>
+            </div>
+          }
+        </div>
       </div>
     </div>
   }
 
-  <!-- ============================================================
-       TAB D — Custos crescentes
-       ============================================================ -->
-  @if (selectedTab() === 'trending') {
-    <div class="insights__body" role="tabpanel" aria-label="Custos crescentes">
+  <!-- ============================================================ TAB 4 — OPTIMIZER -->
+  @if (selectedTab() === 'optimizer') {
+    <div class="insights__body" role="tabpanel" aria-label="Optimizer estratégico">
 
-      @if (trendingLoading()) {
-        <div class="insights__loading" aria-busy="true">
-          <span class="insights__spinner"></span>
-          <span>A carregar…</span>
+      <!-- Break-even summary -->
+      <div class="ci-kpis">
+        <div class="ci-kpi" [class.ci-kpi--green]="breakEven().safetyMarginPct >= 20" [class.ci-kpi--red]="breakEven().safetyMarginPct < 10">
+          <span class="ci-kpi__label">Break-Even Revenue</span>
+          <span class="ci-kpi__value">{{ formatCurrency(breakEven().breakEvenRevenue) }}</span>
         </div>
-      } @else if (trendingSuppliers().length === 0) {
-        <p class="insights__empty">Sem dados suficientes para os últimos 6 meses.</p>
-      } @else {
-        <p class="insights__desc">Comparação entre a média de custos dos últimos 3 meses vs os 3 anteriores.</p>
+        <div class="ci-kpi" [class.ci-kpi--green]="breakEven().safetyMarginPct >= 20" [class.ci-kpi--amber]="breakEven().safetyMarginPct >= 10 && breakEven().safetyMarginPct < 20" [class.ci-kpi--red]="breakEven().safetyMarginPct < 10">
+          <span class="ci-kpi__label">Margem de Segurança</span>
+          <span class="ci-kpi__value">{{ breakEven().safetyMarginPct.toFixed(1) }}%</span>
+        </div>
+        <div class="ci-kpi">
+          <span class="ci-kpi__label">Burn Rate Mensal</span>
+          <span class="ci-kpi__value">{{ formatCurrency(breakEven().monthlyBurnRate) }}</span>
+        </div>
+        <div class="ci-kpi" [class.ci-kpi--green]="breakEven().coverageRatio >= 1.2" [class.ci-kpi--red]="breakEven().coverageRatio < 1">
+          <span class="ci-kpi__label">Coverage Ratio</span>
+          <span class="ci-kpi__value">{{ breakEven().coverageRatio.toFixed(2) }}x</span>
+        </div>
+      </div>
 
-        <div class="insights__table-wrapper">
-          <table class="insights__table" aria-label="Fornecedores com custos crescentes">
-            <thead>
-              <tr>
-                <th scope="col">Fornecedor</th>
-                <th scope="col" class="insights__table-num">Média anterior</th>
-                <th scope="col" class="insights__table-num">Média recente</th>
-                <th scope="col" class="insights__table-num">Variação</th>
-                <th scope="col">Acção</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (t of trendingSuppliers(); track t.name) {
+      <!-- What-if simulator -->
+      <div class="insights__whatif-layout">
+        <div class="insights__supplier-list" aria-label="Simulador de fornecedores">
+          <h2 class="insights__section-title">Simulador What-If</h2>
+          <div class="insights__kpi-bar" style="margin-bottom: 0.75rem">
+            <div class="insights__kpi">
+              <span class="insights__kpi-label">Poupança simulada</span>
+              <span class="insights__kpi-value insights__kpi-value--green">{{ formatCurrency(disabledSavings()) }}</span>
+            </div>
+          </div>
+          @for (s of supplierSpends(); track s.name) {
+            <div class="insights__toggle-row">
+              <div>
+                <p class="insights__toggle-label">{{ s.name }}</p>
+                <p class="insights__toggle-desc">{{ formatCurrency(s.totalSpend) }} / ano</p>
+              </div>
+              <button class="insights__toggle" [class.insights__toggle--on]="s.active"
+                type="button" role="switch" [attr.aria-checked]="s.active"
+                [attr.aria-label]="'Toggle ' + s.name" (click)="toggleSupplier(s.name)">
+                <span class="insights__toggle-knob"></span>
+              </button>
+            </div>
+          }
+        </div>
+
+        <div class="insights__chart-panel">
+          <h2 class="insights__section-title">Resultado mensal (12 meses)</h2>
+          <div class="insights__bar-chart" role="img" aria-label="Gráfico resultado mensal">
+            @for (m of chartMonths(); track m.label) {
+              <div class="insights__bar-group">
+                <div class="insights__bars">
+                  <div class="insights__bar insights__bar--current"
+                    [style.height.%]="barHeightPct(m.current, chartMax())"
+                    [attr.title]="'Atual: ' + formatCurrency(m.current)"></div>
+                  <div class="insights__bar insights__bar--simulated"
+                    [style.height.%]="barHeightPct(m.simulated, chartMax())"
+                    [attr.title]="'Simulado: ' + formatCurrency(m.simulated)"></div>
+                </div>
+                <span class="insights__bar-label">{{ m.label }}</span>
+              </div>
+            }
+          </div>
+          <div class="insights__chart-legend" aria-hidden="true">
+            <span class="insights__legend-dot insights__legend-dot--current"></span><span>Atual</span>
+            <span class="insights__legend-dot insights__legend-dot--simulated"></span><span>Simulado</span>
+          </div>
+
+          <div class="insights__scenario-save">
+            <h3 class="insights__section-title">Guardar cenário</h3>
+            <div class="insights__scenario-input-row">
+              <input class="insights__input" type="text" placeholder="Nome do cenário"
+                [value]="scenarioName()" (input)="onScenarioNameInput($event)" aria-label="Nome do cenário" />
+              <button class="insights__btn insights__btn--secondary" type="button" (click)="saveScenario()">
+                <mat-icon>save</mat-icon><span>Guardar</span>
+              </button>
+            </div>
+            @if (scenarios().length > 0) {
+              <div class="insights__scenarios-list">
+                @for (sc of scenarios(); track sc.name) {
+                  <button class="insights__scenario-pill" type="button"
+                    (click)="loadScenario(sc)" [attr.aria-label]="'Carregar cenário ' + sc.name">
+                    {{ sc.name }}
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- ROI per client -->
+      @if (roiClients().length > 0) {
+        <div class="insights__card">
+          <h2 class="insights__card-title"><mat-icon>account_balance</mat-icon> ROI por Cliente</h2>
+          @if (roiSummary()) {
+            <div class="insights__roi-summary">
+              <div class="insights__roi-callout insights__roi-callout--best">
+                <mat-icon>emoji_events</mat-icon>
+                <div>
+                  <p class="insights__roi-callout-label">Melhor margem</p>
+                  <p class="insights__roi-callout-client">{{ roiSummary()!.best.client }}</p>
+                  <p class="insights__roi-callout-value">{{ formatPct(roiSummary()!.best.marginPct) }}</p>
+                </div>
+              </div>
+              <div class="insights__roi-callout insights__roi-callout--worst">
+                <mat-icon>warning</mat-icon>
+                <div>
+                  <p class="insights__roi-callout-label">Pior margem</p>
+                  <p class="insights__roi-callout-client">{{ roiSummary()!.worst.client }}</p>
+                  <p class="insights__roi-callout-value">{{ formatPct(roiSummary()!.worst.marginPct) }}</p>
+                </div>
+              </div>
+            </div>
+          }
+          <div class="insights__table-wrapper">
+            <table class="insights__table" aria-label="ROI por cliente">
+              <thead>
                 <tr>
-                  <td>{{ t.name }}</td>
-                  <td class="insights__table-num">{{ formatCurrency(t.avgPrev) }}</td>
-                  <td class="insights__table-num">{{ formatCurrency(t.avgRecent) }}</td>
-                  <td class="insights__table-num">
-                    <span
-                      class="insights__change-badge"
-                      [class.insights__change-badge--warning]="t.changePct > 10 && t.changePct <= 25"
-                      [class.insights__change-badge--danger]="t.changePct > 25"
-                    >{{ formatPct(t.changePct) }}</span>
-                  </td>
-                  <td>
-                    @if (t.changePct > 10) {
-                      <button
-                        class="insights__action-pill"
-                        type="button"
-                        (click)="openRenegociate(t.name)"
-                        [attr.aria-label]="'Renegociar com ' + t.name"
-                      >Renegociar</button>
-                    }
-                  </td>
+                  <th scope="col">Cliente</th>
+                  <th scope="col">Owner</th>
+                  <th scope="col" class="insights__table-num">Rec. Prevista</th>
+                  <th scope="col" class="insights__table-num">Rec. Real</th>
+                  <th scope="col" class="insights__table-num">Custos</th>
+                  <th scope="col" class="insights__table-num">Margem €</th>
+                  <th scope="col" class="insights__table-num">Margem %</th>
                 </tr>
-              }
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                @for (c of roiClients(); track c.client) {
+                  <tr>
+                    <td>{{ c.client }}</td>
+                    <td>{{ c.owner || '—' }}</td>
+                    <td class="insights__table-num">{{ formatCurrency(c.forecastRevenue) }}</td>
+                    <td class="insights__table-num">{{ formatCurrency(c.actualRevenue) }}</td>
+                    <td class="insights__table-num">{{ formatCurrency(c.allocatedCost) }}</td>
+                    <td class="insights__table-num">{{ formatCurrency(c.grossMargin) }}</td>
+                    <td class="insights__table-num">
+                      <span class="insights__margin-badge"
+                        [class.insights__margin-badge--green]="c.marginPct > 40"
+                        [class.insights__margin-badge--amber]="c.marginPct >= 20 && c.marginPct <= 40"
+                        [class.insights__margin-badge--red]="c.marginPct < 20">
+                        {{ formatPct(c.marginPct) }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
         </div>
       }
     </div>
   }
 
-  <!-- ============================================================
-       TAB E — ROI por cliente
-       ============================================================ -->
-  @if (selectedTab() === 'roi') {
-    <div class="insights__body" role="tabpanel" aria-label="ROI por cliente">
+  <!-- ============================================================ TAB 5 — ALERTAS -->
+  @if (selectedTab() === 'alertas') {
+    <div class="insights__body" role="tabpanel" aria-label="Alertas automáticos">
 
-      @if (roiLoading()) {
-        <div class="insights__loading" aria-busy="true">
-          <span class="insights__spinner"></span>
-          <span>A carregar…</span>
+      @if (alerts().length === 0) {
+        <div class="insights__empty-state insights__empty-state--success">
+          <mat-icon>check_circle</mat-icon>
+          <p>Sem alertas ativos. Tudo dentro dos parâmetros normais.</p>
         </div>
-      } @else if (roiClients().length === 0) {
-        <p class="insights__empty">Sem dados de previsão para o ano atual. Importe uma previsão em Previsão.</p>
       } @else {
-
-        <!-- Summary callout cards -->
-        @if (roiSummary()) {
-          <div class="insights__roi-summary">
-            <div class="insights__roi-callout insights__roi-callout--best">
-              <mat-icon>emoji_events</mat-icon>
-              <div>
-                <p class="insights__roi-callout-label">Melhor margem</p>
-                <p class="insights__roi-callout-client">{{ roiSummary()!.best.client }}</p>
-                <p class="insights__roi-callout-value">{{ formatPct(roiSummary()!.best.marginPct) }}</p>
+        <p class="insights__desc">{{ alerts().length }} alerta(s) activo(s) — ordenados por gravidade.</p>
+        <div class="ci-alerts">
+          @for (alert of alerts(); track alert.title) {
+            <div class="ci-alert"
+              [class.ci-alert--critical]="alert.severity === 'critical'"
+              [class.ci-alert--warning]="alert.severity === 'warning'"
+              [class.ci-alert--info]="alert.severity === 'info'"
+              role="alert"
+              [attr.aria-label]="alert.severity + ': ' + alert.title">
+              <mat-icon class="ci-alert__icon" [style.color]="alertSeverityColor(alert.severity)">{{ alert.icon }}</mat-icon>
+              <div class="ci-alert__content">
+                <p class="ci-alert__title">{{ alert.title }}</p>
+                <p class="ci-alert__desc">{{ alert.description }}</p>
               </div>
-            </div>
-            <div class="insights__roi-callout insights__roi-callout--worst">
-              <mat-icon>warning</mat-icon>
-              <div>
-                <p class="insights__roi-callout-label">Pior margem</p>
-                <p class="insights__roi-callout-client">{{ roiSummary()!.worst.client }}</p>
-                <p class="insights__roi-callout-value">{{ formatPct(roiSummary()!.worst.marginPct) }}</p>
-              </div>
-            </div>
-          </div>
-        }
-
-        <!-- ROI table -->
-        <div class="insights__table-wrapper">
-          <table class="insights__table" aria-label="ROI por cliente">
-            <thead>
-              <tr>
-                <th scope="col">Cliente</th>
-                <th scope="col">Owner</th>
-                <th scope="col" class="insights__table-num">Rec. Prevista</th>
-                <th scope="col" class="insights__table-num">Rec. Real</th>
-                <th scope="col" class="insights__table-num">Custos Alocados</th>
-                <th scope="col" class="insights__table-num">Margem €</th>
-                <th scope="col" class="insights__table-num">Margem %</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (c of roiClients(); track c.client) {
-                <tr>
-                  <td>{{ c.client }}</td>
-                  <td>{{ c.owner || '—' }}</td>
-                  <td class="insights__table-num">{{ formatCurrency(c.forecastRevenue) }}</td>
-                  <td class="insights__table-num">{{ formatCurrency(c.actualRevenue) }}</td>
-                  <td class="insights__table-num">{{ formatCurrency(c.allocatedCost) }}</td>
-                  <td class="insights__table-num">{{ formatCurrency(c.grossMargin) }}</td>
-                  <td class="insights__table-num">
-                    <span
-                      class="insights__margin-badge"
-                      [class.insights__margin-badge--green]="c.marginPct > 40"
-                      [class.insights__margin-badge--amber]="c.marginPct >= 20 && c.marginPct <= 40"
-                      [class.insights__margin-badge--red]="c.marginPct < 20"
-                    >{{ formatPct(c.marginPct) }}</span>
-                  </td>
-                </tr>
+              @if (alert.value) {
+                <span class="ci-alert__badge"
+                  [class.ci-alert__badge--critical]="alert.severity === 'critical'"
+                  [class.ci-alert__badge--warning]="alert.severity === 'warning'"
+                  [class.ci-alert__badge--info]="alert.severity === 'info'">
+                  {{ alert.value }}
+                </span>
               }
-            </tbody>
-          </table>
+            </div>
+          }
         </div>
       }
     </div>
