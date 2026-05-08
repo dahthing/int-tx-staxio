@@ -25,6 +25,7 @@ interface AppConfig {
   cron_enabled: string;
   inbound_provider: string;
   inbound_email: string;
+  inbound_signing_secret: string;
 }
 
 export interface Supplier {
@@ -93,6 +94,7 @@ export class Settings implements OnInit {
     cron_enabled:                   [true],
     inbound_provider:               ['resend' as 'resend' | 'sendgrid'],
     inbound_email:                  ['' as string],
+    inbound_signing_secret:         ['' as string],
   });
 
   readonly newSupplierForm = this.#fb.nonNullable.group({
@@ -115,6 +117,7 @@ export class Settings implements OnInit {
           cron_enabled:                   cfg.cron_enabled !== 'false',
           inbound_provider:               (cfg.inbound_provider as 'resend' | 'sendgrid') ?? 'resend',
           inbound_email:                  cfg.inbound_email ?? '',
+          inbound_signing_secret:         '',
         });
         this.#loading.set(false);
       },
@@ -253,6 +256,7 @@ export class Settings implements OnInit {
       cron_enabled:                   String(raw.cron_enabled),
       inbound_provider:               raw.inbound_provider,
       inbound_email:                  raw.inbound_email,
+      ...(raw.inbound_signing_secret ? { inbound_signing_secret: raw.inbound_signing_secret } : {}),
     };
     this.#http.patch<{ updated: string[] }>(this.#configUrl, patch).subscribe({
       next: () => {

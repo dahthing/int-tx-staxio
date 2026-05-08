@@ -64,7 +64,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const config = Object.fromEntries((data ?? []).map(r => [r.key, r.value]));
+    const config = Object.fromEntries(
+      (data ?? []).map(r => [r.key, MASKED_KEYS.has(r.key) ? (r.value ? '••••' : '') : r.value])
+    );
     return new Response(JSON.stringify(config), {
       headers: { ...CORS, 'Content-Type': 'application/json' },
     });

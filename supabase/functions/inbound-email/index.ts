@@ -3,10 +3,10 @@
 // Suporta: Resend Inbound, SendGrid Inbound Parse
 //
 // Secrets necessários:
-//   INBOUND_PROVIDER          = "resend" | "sendgrid"
-//   INBOUND_SIGNING_SECRET    = <resend signing secret>  (só Resend)
 //   GOOGLE_SERVICE_ACCOUNT_JSON
-//   DRIVE_INBOX_FOLDER_ID
+// Lê inbound_provider, inbound_signing_secret, drive_inbox_folder_id de app_config
+
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -113,8 +113,7 @@ interface ResendPayload {
   attachments?: ResendAttachment[];
 }
 
-async function verifyResendSignature(req: Request, rawBody: string): Promise<boolean> {
-  const secret = Deno.env.get('INBOUND_SIGNING_SECRET');
+async function verifyResendSignature(req: Request, rawBody: string, secret: string): Promise<boolean> {
   if (!secret) return true; // sem secret configurado, aceita (dev mode)
 
   const timestamp = req.headers.get('svix-timestamp') ?? '';
@@ -131,8 +130,8 @@ async function verifyResendSignature(req: Request, rawBody: string): Promise<boo
   return signature.split(' ').some(s => s.startsWith('v1,') && s.slice(3) === computedB64);
 }
 
-async function parseResend(req: Request, rawBody: string): Promise<{ filename: string; bytes: Uint8Array }[]> {
-  if (!(await verifyResendSignature(req, rawBody))) {
+async function parseResend(req: Request, rawBody: string, secret: string): Promise<{ filename: string; bytes: Uint8Array }[]> {
+  if (!(await verifyResendSignature(req, rawBody, secret))) {
     throw new Error('Assinatura Resend inválida');
   }
 
@@ -178,8 +177,19 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const provider  = Deno.env.get('INBOUND_PROVIDER') ?? 'resend';
-    const folderId  = Deno.env.get('DRIVE_INBOX_FOLDER_ID')!;
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+    const { data: cfgRows } = await supabase
+      .from('app_config')
+      .select('key, value')
+      .in('key', ['inbound_provider', 'inbound_signing_secret', 'drive_inbox_folder_id']);
+    const cfg = Object.fromEntries((cfgRows ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
+
+    const provider   = cfg['inbound_provider'] ?? Deno.env.get('INBOUND_PROVIDER') ?? 'resend';
+    const sigSecret  = cfg['inbound_signing_secret'] ?? '';
+    const folderId   = cfg['drive_inbox_folder_id'] ?? Deno.env.get('DRIVE_INBOX_FOLDER_ID')!;
     const driveToken = await getDriveToken();
 
     let attachments: { filename: string; bytes: Uint8Array }[];
@@ -188,7 +198,7 @@ Deno.serve(async (req) => {
       attachments = await parseSendGrid(req);
     } else {
       const rawBody = await req.text();
-      attachments = await parseResend(req, rawBody);
+      attachments = await parseResend(req, rawBody, sigSecret);
     }
 
     if (attachments.length === 0) {

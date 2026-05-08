@@ -2,6 +2,7 @@
 -- Adiciona chaves de configuração para email inbound
 
 INSERT INTO app_config (key, value) VALUES
-  ('inbound_provider', 'resend'),
-  ('inbound_email',    '')
+  ('inbound_provider',       'resend'),
+  ('inbound_email',          ''),
+  ('inbound_signing_secret', '')
 ON CONFLICT (key) DO NOTHING;

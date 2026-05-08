@@ -264,7 +264,7 @@
           </button>
         </div>
 
-        <!-- Provider + email -->
+        <!-- Provider + email + secret -->
         <div class="settings__fields settings__fields--inbound">
           <div class="field">
             <label class="field__label" for="inbound_provider">Provedor</label>
@@ -278,6 +278,18 @@
             <input id="inbound_email" class="field__input" type="email" formControlName="inbound_email"
               placeholder="documentos@staxio.app" autocomplete="off" />
             <p class="field__hint">O endereço que vais usar para enviar/encaminhar faturas.</p>
+          </div>
+        </div>
+        <div class="settings__fields">
+          <div class="field">
+            <label class="field__label" for="inbound_signing_secret">
+              <mat-icon style="font-size:14px;width:14px;height:14px">lock</mat-icon>
+              Signing Secret (webhook)
+            </label>
+            <input id="inbound_signing_secret" class="field__input" type="password"
+              formControlName="inbound_signing_secret"
+              placeholder="Deixa em branco para não alterar" autocomplete="new-password" />
+            <p class="field__hint">Segredo do webhook do provedor. Guardado de forma segura — nunca exposto em claro.</p>
           </div>
         </div>
 
