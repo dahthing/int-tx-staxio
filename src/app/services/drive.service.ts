@@ -13,8 +13,9 @@ export interface DriveFolder {
 export class DriveService {
   readonly #http = inject(HttpClient);
 
-  listFolders(parentId: string): Observable<DriveFolder[]> {
-    const url = `${environment.edgeFunctionsUrl}/list-folders?parent_id=${encodeURIComponent(parentId)}`;
-    return this.#http.get<{ folders: DriveFolder[] }>(url).pipe(map(r => r.folders));
+  listFolders(parentId?: string): Observable<DriveFolder[]> {
+    const base = `${environment.edgeFunctionsUrl}/list-folders`;
+    const url = parentId ? `${base}?parent_id=${encodeURIComponent(parentId)}` : base;
+    return this.#http.get<{ folders: DriveFolder[] }>(url).pipe(map(r => r.folders ?? []));
   }
 }

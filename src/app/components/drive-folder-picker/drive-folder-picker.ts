@@ -25,7 +25,7 @@ import { DriveFolder, DriveService } from '../../services/drive.service';
   },
 })
 export class DriveFolderPicker implements OnInit {
-  readonly rootFolderId = input.required<string>();
+  readonly rootFolderId = input<string>('');
 
   readonly selected = output<{ id: string; path: string }>();
   readonly cancelled = output<void>();
@@ -50,7 +50,8 @@ export class DriveFolderPicker implements OnInit {
   );
 
   async ngOnInit(): Promise<void> {
-    await this.#load(this.rootFolderId());
+    // Pass undefined if empty → edge function falls back to drive_root_folder_id from app_config
+    await this.#load(this.rootFolderId() || undefined);
   }
 
   async navigateInto(folder: DriveFolder): Promise<void> {
@@ -66,7 +67,7 @@ export class DriveFolderPicker implements OnInit {
 
   async navigateToRoot(): Promise<void> {
     this.#stack.set([]);
-    await this.#load(this.rootFolderId());
+    await this.#load(this.rootFolderId() || undefined);
   }
 
   confirm(): void {
@@ -78,7 +79,7 @@ export class DriveFolderPicker implements OnInit {
     this.cancelled.emit();
   }
 
-  async #load(folderId: string): Promise<void> {
+  async #load(folderId?: string): Promise<void> {
     this.#loading.set(true);
     this.#drive.listFolders(folderId).subscribe({
       next: folders => {

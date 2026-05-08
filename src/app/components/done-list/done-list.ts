@@ -8,7 +8,9 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe, DecimalPipe } from '@angular/common';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { HttpClient } from '@angular/common/http';
+import { LayoutService } from '../../services/layout.service';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -38,6 +40,9 @@ export class DoneList implements OnInit {
   readonly #supabase = inject(SUPABASE_CLIENT);
   readonly #http = inject(HttpClient);
   readonly #snackBar = inject(MatSnackBar);
+  readonly #sanitizer = inject(DomSanitizer);
+  readonly #layout = inject(LayoutService);
+  readonly isMobile = this.#layout.isMobile;
 
   readonly #entries = signal<QueueEntry[]>([]);
   readonly entries = this.#entries.asReadonly();
@@ -60,6 +65,31 @@ export class DoneList implements OnInit {
   readonly filterSupplier = this.#filterSupplier.asReadonly();
   readonly filterMonth = this.#filterMonth.asReadonly();
 
+  readonly #selectedId = signal<string | null>(null);
+  readonly selectedId = this.#selectedId.asReadonly();
+
+  readonly previewUrl = computed<SafeResourceUrl | null>(() => {
+    const id = this.#selectedId();
+    if (!id) return null;
+    const entry = this.#entries().find(e => e.id === id);
+    if (!entry?.file_id) return null;
+    return this.#sanitizer.bypassSecurityTrustResourceUrl(
+      `https://drive.google.com/file/d/${entry.file_id}/preview`
+    );
+  });
+
+  readonly driveViewerUrl = computed<string | null>(() => {
+    const id = this.#selectedId();
+    if (!id) return null;
+    const entry = this.#entries().find(e => e.id === id);
+    return entry?.file_id ? `https://drive.google.com/file/d/${entry.file_id}/view` : null;
+  });
+
+  readonly selectedEntry = computed<QueueEntry | null>(() => {
+    const id = this.#selectedId();
+    return id ? (this.#entries().find(e => e.id === id) ?? null) : null;
+  });
+
   readonly filteredEntries = computed(() => {
     const sup = this.#filterSupplier().toLowerCase().trim();
     const month = this.#filterMonth();
@@ -69,6 +99,10 @@ export class DoneList implements OnInit {
       return true;
     });
   });
+
+  onSelectEntry(entry: QueueEntry): void {
+    this.#selectedId.update(id => id === entry.id ? null : entry.id);
+  }
 
   async ngOnInit(): Promise<void> {
     const { data } = await this.#supabase
