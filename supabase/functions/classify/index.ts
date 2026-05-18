@@ -87,6 +87,63 @@ async function getDriveToken(): Promise<string> {
 }
 
 // ============================================================
+// DRIVE: helpers para re-arquivo (Parte D)
+// ============================================================
+async function getDriveFileParent(token: string, fileId: string): Promise<string> {
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${fileId}?fields=parents&supportsAllDrives=true`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  const data = await res.json();
+  return (data.parents ?? [])[0] ?? '';
+}
+
+async function trashDriveFile(token: string, fileId: string): Promise<void> {
+  await fetch(
+    `https://www.googleapis.com/drive/v3/files/${fileId}?supportsAllDrives=true`,
+    {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trashed: true }),
+    }
+  );
+}
+
+async function findExistingDoneRow(
+  supabase: ReturnType<typeof createClient>,
+  criteria: { atcud: string | null; supplier: string | null; value: number | null; doc_date: string | null }
+): Promise<{ id: string; file_id: string; file_name: string; inbox_folder_id: string; source: string } | null> {
+  // Prioridade 1: ATCUD exacto
+  if (criteria.atcud) {
+    const { data } = await supabase
+      .from('processing_queue')
+      .select('id, file_id, file_name, inbox_folder_id, source')
+      .eq('status', 'done')
+      .eq('atcud', criteria.atcud)
+      .limit(1)
+      .single();
+    if (data) return data;
+  }
+
+  // Prioridade 2: supplier + value + doc_date (mesmo dia)
+  if (criteria.supplier && criteria.value !== null && criteria.doc_date) {
+    const { data } = await supabase
+      .from('processing_queue')
+      .select('id, file_id, file_name, inbox_folder_id, source')
+      .eq('status', 'done')
+      .eq('supplier', criteria.supplier)
+      .gte('value', criteria.value - 0.01)
+      .lte('value', criteria.value + 0.01)
+      .eq('doc_date', criteria.doc_date)
+      .limit(1)
+      .single();
+    if (data) return data;
+  }
+
+  return null;
+}
+
+// ============================================================
 // DRIVE: lista ficheiros PDF na inbox
 // ============================================================
 async function listInboxFiles(token: string, folderId: string) {
@@ -355,6 +412,60 @@ Deno.serve(async (req) => {
             vat_amount: typeof rawMeta.vat_amount === 'number' ? rawMeta.vat_amount as number : null,
             vat_rate: typeof rawMeta.vat_rate === 'number' ? rawMeta.vat_rate as number : null,
           };
+
+          // ---- Re-arquivo (Parte D): só para source=archive ----
+          // Se o documento já foi importado via inbox corrente (status=done, source=current),
+          // move o registo original para archive e descarta a cópia do inbox_archive.
+          if (source === 'archive') {
+            const existingDone = await findExistingDoneRow(supabase, {
+              atcud: meta.atcud,
+              supplier: meta.supplier,
+              value: meta.value,
+              doc_date: meta.doc_date,
+            });
+
+            if (existingDone) {
+              if (existingDone.source === 'current') {
+                // Recalcula destino na árvore archive
+                const archivePayload = buildQueuePayload(
+                  { id: existingDone.file_id, name: existingDone.file_name },
+                  existingDone.inbox_folder_id,
+                  meta, suppliers, folderConfig, companyNif, 'archive',
+                );
+                // Resolve pasta actual do ficheiro no Drive (já foi movido do inbox original)
+                const currentParent = await getDriveFileParent(driveToken, existingDone.file_id);
+
+                await supabase.from('processing_queue').update({
+                  source: 'archive',
+                  status: 'pending',
+                  dest_path: archivePayload.dest_path,
+                  dest_root_folder_id: archivePayload.dest_root_folder_id,
+                  inbox_folder_id: currentParent,
+                  error_message: null,
+                }).eq('id', existingDone.id);
+
+                await trashDriveFile(driveToken, file.id);
+
+                await supabase.from('processing_logs').insert({
+                  queue_id: existingDone.id,
+                  file_id: existingDone.file_id,
+                  file_name: existingDone.file_name,
+                  action: 'rearchive',
+                  status: 'success',
+                  metadata: {
+                    duplicate_file_id: file.id,
+                    match_key: meta.atcud ? 'atcud' : 'fuzzy',
+                    new_dest_path: archivePayload.dest_path,
+                  },
+                });
+              } else {
+                // Já arquivado — descarta cópia redundante
+                await trashDriveFile(driveToken, file.id);
+              }
+              queued++;
+              continue;
+            }
+          }
 
           // Detecção de duplicado: mesmo fornecedor + valor ±1€ + data no mesmo mês
           let isDuplicateSuspect = false;
