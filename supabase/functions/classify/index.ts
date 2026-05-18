@@ -10,6 +10,12 @@ import {
   type FolderConfig,
   type ClaudeMeta,
 } from './classify.utils.ts';
+import {
+  extractQrTextFromPdf,
+  extractQrTextFromThumbnail,
+  parseAtQrString,
+  isQrMetaSufficient,
+} from './qr.utils.ts';
 import { checkRateLimit, rateLimitExceeded } from '../_shared/rate-limit.ts';
 import { z, validate, validationError } from '../_shared/validate.ts';
 
@@ -93,25 +99,6 @@ async function listInboxFiles(token: string, folderId: string) {
   );
   const data = await res.json();
   return data.files ?? [];
-}
-
-// ============================================================
-// DRIVE: download PDF como base64
-// ============================================================
-async function downloadFileBase64(token: string, fileId: string): Promise<string> {
-  const res = await fetch(
-    `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  const buffer = await res.arrayBuffer();
-  // Spread em chunks para evitar "Maximum call stack size exceeded" em PDFs grandes
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  const chunkSize = 8192;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-  }
-  return btoa(binary);
 }
 
 // ============================================================
@@ -261,24 +248,94 @@ Deno.serve(async (req) => {
         if (existing && existing.status !== 'error') continue;
 
         try {
-          // Download e extracção
-          const pdfBase64 = await downloadFileBase64(driveToken, file.id);
-          const rawMeta = await extractMetadata(anthropic, pdfBase64, supabase);
+          // ---- Tier 1/2: tentar ler QR AT antes de chamar Claude ----
+          const pdfBytes = await (async () => {
+            const res = await fetch(
+              `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&supportsAllDrives=true`,
+              { headers: { Authorization: `Bearer ${driveToken}` } }
+            );
+            return new Uint8Array(await res.arrayBuffer());
+          })();
+
+          // Converte para base64 (reutilizado depois se precisarmos do Claude)
+          let pdfBase64 = '';
+          const bytes = pdfBytes;
+          const chunkSize = 8192;
+          let binary = '';
+          for (let i = 0; i < bytes.length; i += chunkSize) {
+            binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+          }
+          pdfBase64 = btoa(binary);
+
+          let classifyTier: 'qr_text' | 'qr_image' | 'claude' = 'claude';
+          let qrSupplierName: string | null = null;
+          let partialMeta: Partial<ClaudeMeta> | null = null;
+
+          // Tier 1: texto do PDF
+          const qrText1 = await extractQrTextFromPdf(pdfBytes);
+          if (qrText1) {
+            const parsed = parseAtQrString(qrText1);
+            if (parsed && isQrMetaSufficient(parsed.partial)) {
+              classifyTier = 'qr_text';
+              partialMeta = parsed.partial;
+              // Resolve issuerNif/direction via campos QR
+              partialMeta.issuerNif = parsed.issuerNifFromQr || null;
+              // Lookup supplier name por NIF
+              if (parsed.issuerNifFromQr) {
+                const found = suppliers.find(s => s.nif === parsed.issuerNifFromQr);
+                qrSupplierName = found?.name ?? null;
+              }
+            }
+          }
+
+          // Tier 2: thumbnail Drive + jsQR (só se tier 1 falhou)
+          if (!partialMeta) {
+            const qrText2 = await extractQrTextFromThumbnail(file.id, driveToken);
+            if (qrText2) {
+              const parsed = parseAtQrString(qrText2);
+              if (parsed && isQrMetaSufficient(parsed.partial)) {
+                classifyTier = 'qr_image';
+                partialMeta = parsed.partial;
+                partialMeta.issuerNif = parsed.issuerNifFromQr || null;
+                if (parsed.issuerNifFromQr) {
+                  const found = suppliers.find(s => s.nif === parsed.issuerNifFromQr);
+                  qrSupplierName = found?.name ?? null;
+                }
+              }
+            }
+          }
+
+          let rawMeta: Record<string, unknown>;
+          if (partialMeta) {
+            // Metadados suficientes do QR — sem chamada Claude
+            rawMeta = {
+              ...partialMeta,
+              supplier: qrSupplierName,
+              is_my_doc: false,
+              my_doc_kind: null,
+              vat_amount: null,
+              vat_rate: null,
+            };
+          } else {
+            // Tier 3: Claude Vision (fallback)
+            classifyTier = 'claude';
+            rawMeta = await extractMetadata(anthropic, pdfBase64, supabase);
+          }
 
           const meta: ClaudeMeta = {
-            doc_date: rawMeta.doc_date ?? null,
-            supplier: rawMeta.supplier ?? null,
-            issuerNif: rawMeta.issuerNif ?? null,
-            value: rawMeta.value ?? null,
-            nif: rawMeta.nif ?? null,
-            country: rawMeta.country ?? null,
-            currency: rawMeta.currency ?? 'EUR',
-            atcud: rawMeta.atcud ?? null,
-            confidence: typeof rawMeta.confidence === 'number' ? rawMeta.confidence : 0.8,
+            doc_date: rawMeta.doc_date as string ?? null,
+            supplier: rawMeta.supplier as string ?? null,
+            issuerNif: rawMeta.issuerNif as string ?? null,
+            value: rawMeta.value as number ?? null,
+            nif: rawMeta.nif as string ?? null,
+            country: rawMeta.country as string ?? null,
+            currency: rawMeta.currency as string ?? 'EUR',
+            atcud: rawMeta.atcud as string ?? null,
+            confidence: typeof rawMeta.confidence === 'number' ? rawMeta.confidence as number : 0.8,
             is_my_doc: rawMeta.is_my_doc === true,
-            my_doc_kind: rawMeta.my_doc_kind ?? null,
-            vat_amount: typeof rawMeta.vat_amount === 'number' ? rawMeta.vat_amount : null,
-            vat_rate: typeof rawMeta.vat_rate === 'number' ? rawMeta.vat_rate : null,
+            my_doc_kind: rawMeta.my_doc_kind as string ?? null,
+            vat_amount: typeof rawMeta.vat_amount === 'number' ? rawMeta.vat_amount as number : null,
+            vat_rate: typeof rawMeta.vat_rate === 'number' ? rawMeta.vat_rate as number : null,
           };
 
           // Detecção de duplicado: mesmo fornecedor + valor ±1€ + data no mesmo mês
@@ -343,7 +400,7 @@ Deno.serve(async (req) => {
             file_name: file.name,
             action: 'classify',
             status: 'success',
-            metadata: { ...meta, doc_type: payload.doc_type, is_duplicate_suspect: isDuplicateSuspect, source },
+            metadata: { ...meta, doc_type: payload.doc_type, is_duplicate_suspect: isDuplicateSuspect, source, classify_tier: classifyTier },
           });
 
           // Extracção de transacções para extratos bancários
