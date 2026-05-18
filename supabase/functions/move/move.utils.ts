@@ -9,6 +9,7 @@ export interface QueueEntry {
   file_id: string;
   file_name: string;
   inbox_folder_id: string;
+  source: 'current' | 'archive';
   dest_path: string | null;
   dest_file_name: string | null;
   dest_root_folder_id: string | null;

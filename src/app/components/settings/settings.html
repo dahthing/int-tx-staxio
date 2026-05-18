@@ -67,6 +67,36 @@
             </div>
 
             <div class="field">
+              <label class="field__label" for="inbox_archive">
+                Inbox Archive Files
+              </label>
+              <input
+                id="inbox_archive"
+                class="field__input"
+                type="text"
+                formControlName="drive_inbox_archive_folder_id"
+                placeholder="ID da pasta Inbox_Archive_Files no Drive"
+                autocomplete="off"
+                spellcheck="false"
+              />
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="archive_root">
+                Raiz Archive_Files
+              </label>
+              <input
+                id="archive_root"
+                class="field__input"
+                type="text"
+                formControlName="drive_archive_root_folder_id"
+                placeholder="ID da pasta Archive_Files no Drive"
+                autocomplete="off"
+                spellcheck="false"
+              />
+            </div>
+
+            <div class="field">
               <label class="field__label" for="internacional">
                 Internacional
                 @if (form.controls.drive_internacional_folder_id.invalid && form.controls.drive_internacional_folder_id.touched) {

@@ -61,15 +61,19 @@ export class Shell implements OnInit, OnDestroy {
   readonly hasErrors = computed(() => this.errorCount() > 0);
 
   readonly navItems: NavItem[] = [
-    { label: 'Dashboard', icon: 'dashboard',      route: '/' },
-    { label: 'Revisão',   icon: 'rate_review',    route: '/review' },
-    { label: 'Tratados',  icon: 'task_alt',       route: '/done' },
-    { label: 'Treino',    icon: 'model_training', route: '/training' },
-    { label: 'Definições',icon: 'settings',       route: '/settings' },
-    { label: 'Previsão',  icon: 'trending_up',   route: '/budget' },
-    { label: 'Insights',      icon: 'psychology',    route: '/insights' },
-    { label: 'Fornecedores',  icon: 'store',         route: '/suppliers' },
-    { label: 'Reconciliação', icon: 'account_balance', route: '/reconciliation' },
+    // Operações
+    { label: 'Dashboard',     icon: 'dashboard',        route: '/' },
+    { label: 'Revisão',       icon: 'rate_review',      route: '/review' },
+    { label: 'Tratados',      icon: 'task_alt',         route: '/done' },
+    { label: 'Arquivo',       icon: 'inventory_2',      route: '/archive' },
+    // Financeiro
+    { label: 'Reconciliação', icon: 'account_balance',  route: '/reconciliation' },
+    { label: 'Previsão',      icon: 'trending_up',      route: '/budget' },
+    { label: 'Insights',      icon: 'psychology',       route: '/insights' },
+    // Configuração
+    { label: 'Fornecedores',  icon: 'store',            route: '/suppliers' },
+    { label: 'Treino',        icon: 'model_training',   route: '/training' },
+    { label: 'Definições',    icon: 'settings',         route: '/settings' },
   ];
 
   readonly #titleEffect = effect(() => {

@@ -56,6 +56,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./components/reconciliation/reconciliation').then(m => m.Reconciliation),
       },
+      {
+        path: 'archive',
+        loadComponent: () =>
+          import('./components/archive-list/archive-list').then(m => m.ArchiveList),
+      },
     ],
   },
 ];

@@ -196,6 +196,7 @@ Deno.serve(async (req) => {
       folderConfigMap[fc.key] = fc.folder_id ?? null;
     }
     const defaultRootFolderId = folderConfigMap['root'] ?? Deno.env.get('DRIVE_ROOT_FOLDER_ID') ?? '';
+    const archiveRootFolderId = folderConfigMap['archive_root'] ?? '';
 
     // Busca entradas pending
     let query = supabase
@@ -262,7 +263,9 @@ Deno.serve(async (req) => {
       }).eq('id', entry.id);
 
       try {
-        const baseFolderId = entry.dest_root_folder_id ?? defaultRootFolderId;
+        const baseFolderId = entry.source === 'archive'
+          ? (archiveRootFolderId || entry.dest_root_folder_id || defaultRootFolderId)
+          : (entry.dest_root_folder_id ?? defaultRootFolderId);
         const segments = splitDestPath(entry.dest_path!);
         const destFolderId = await resolveFolderPath(driveToken, segments, baseFolderId);
         const finalFileName = resolveDestFileName(entry);

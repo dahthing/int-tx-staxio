@@ -169,6 +169,7 @@ Formato exacto:
   "nif": "NIF/VAT do emitente ou null",
   "country": "país do emitente em inglês ou null",
   "currency": "código ISO 4217 (EUR, USD, etc.) ou EUR se não indicado",
+  "atcud": "código ATCUD no formato XXXXXXXX-NNNNN (geralmente no rodapé do documento, após 'ATCUD:') ou null se ausente",
   "confidence": número entre 0 e 1 indicando a tua confiança na extracção,
   "is_my_doc": true se este documento foi EMITIDO pela nossa empresa (NIF 514084235 aparece como emitente), false caso contrário,
   "my_doc_kind": "invoice_issued" | "receipt_issued" | "quote_issued" | null (apenas quando is_my_doc=true)
@@ -230,152 +231,167 @@ Deno.serve(async (req) => {
     const suppliers: Supplier[] = suppliersData ?? [];
     const folderConfig: FolderConfig[] = folderConfigData ?? [];
 
-    // Determina quais ficheiros processar
-    const files = specificFileId
-      ? [{ id: specificFileId, name: 'unknown.pdf' }]
-      : await listInboxFiles(driveToken, inboxFolderId);
-
-    if (files.length === 0) {
-      return new Response(
-        JSON.stringify({ queued: 0, message: 'Inbox vazia' }),
-        { headers: { ...CORS, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Inboxes a processar: corrente + arquivo (se configurado)
+    type InboxEntry = { folderId: string; source: 'current' | 'archive' };
+    const archiveFolderId = folderConfig.find(f => f.key === 'inbox_archive')?.folder_id ?? null;
+    const inboxesToProcess: InboxEntry[] = specificFileId
+      ? [{ folderId: inboxFolderId, source: 'current' }]
+      : [
+          { folderId: inboxFolderId, source: 'current' },
+          ...(archiveFolderId ? [{ folderId: archiveFolderId, source: 'archive' as const }] : []),
+        ];
 
     let queued = 0;
 
-    for (const file of files) {
-      // Ignora se já está na fila (excepto se for status=error, que pode ser re-processado)
-      const { data: existing } = await supabase
-        .from('processing_queue')
-        .select('id, status')
-        .eq('file_id', file.id)
-        .single();
+    for (const { folderId: currentInboxId, source } of inboxesToProcess) {
+      const files = specificFileId
+        ? [{ id: specificFileId, name: 'unknown.pdf' }]
+        : await listInboxFiles(driveToken, currentInboxId);
 
-      if (existing && existing.status !== 'error') continue;
+      if (files.length === 0) continue;
 
-      try {
-        // Download e extracção
-        const pdfBase64 = await downloadFileBase64(driveToken, file.id);
-        const rawMeta = await extractMetadata(anthropic, pdfBase64, supabase);
+      for (const file of files) {
+        // Ignora se já está na fila (excepto se for status=error, que pode ser re-processado)
+        const { data: existing } = await supabase
+          .from('processing_queue')
+          .select('id, status')
+          .eq('file_id', file.id)
+          .single();
 
-        const meta: ClaudeMeta = {
-          doc_date: rawMeta.doc_date ?? null,
-          supplier: rawMeta.supplier ?? null,
-          issuerNif: rawMeta.issuerNif ?? null,
-          value: rawMeta.value ?? null,
-          nif: rawMeta.nif ?? null,
-          country: rawMeta.country ?? null,
-          currency: rawMeta.currency ?? 'EUR',
-          confidence: typeof rawMeta.confidence === 'number' ? rawMeta.confidence : 0.8,
-          is_my_doc: rawMeta.is_my_doc === true,
-          my_doc_kind: rawMeta.my_doc_kind ?? null,
-          vat_amount: typeof rawMeta.vat_amount === 'number' ? rawMeta.vat_amount : null,
-          vat_rate: typeof rawMeta.vat_rate === 'number' ? rawMeta.vat_rate : null,
-        };
+        if (existing && existing.status !== 'error') continue;
 
-        // Detecção de duplicado: mesmo fornecedor + valor ±1€ + data no mesmo mês
-        let isDuplicateSuspect = false;
-        if (meta.supplier && meta.value && meta.doc_date) {
-          const [dy, dm] = meta.doc_date.split('-').map(Number);
-          const { data: similar } = await supabase
-            .from('processing_queue')
-            .select('id')
-            .eq('supplier', meta.supplier)
-            .gte('value', meta.value - 1)
-            .lte('value', meta.value + 1)
-            .gte('doc_date', `${dy}-${String(dm).padStart(2,'0')}-01`)
-            .lte('doc_date', `${dy}-${String(dm).padStart(2,'0')}-31`)
-            .neq('file_id', file.id)
-            .limit(1);
-          isDuplicateSuspect = (similar?.length ?? 0) > 0;
-        }
+        try {
+          // Download e extracção
+          const pdfBase64 = await downloadFileBase64(driveToken, file.id);
+          const rawMeta = await extractMetadata(anthropic, pdfBase64, supabase);
 
-        const payload = buildQueuePayload(file, inboxFolderId, meta, suppliers, folderConfig, companyNif);
+          const meta: ClaudeMeta = {
+            doc_date: rawMeta.doc_date ?? null,
+            supplier: rawMeta.supplier ?? null,
+            issuerNif: rawMeta.issuerNif ?? null,
+            value: rawMeta.value ?? null,
+            nif: rawMeta.nif ?? null,
+            country: rawMeta.country ?? null,
+            currency: rawMeta.currency ?? 'EUR',
+            atcud: rawMeta.atcud ?? null,
+            confidence: typeof rawMeta.confidence === 'number' ? rawMeta.confidence : 0.8,
+            is_my_doc: rawMeta.is_my_doc === true,
+            my_doc_kind: rawMeta.my_doc_kind ?? null,
+            vat_amount: typeof rawMeta.vat_amount === 'number' ? rawMeta.vat_amount : null,
+            vat_rate: typeof rawMeta.vat_rate === 'number' ? rawMeta.vat_rate : null,
+          };
 
-        // Persiste fornecedor auto-detectado se não estiver na lista conhecida
-        if (meta.supplier && payload.doc_type !== 'unknown') {
-          const supplierLower = meta.supplier.toLowerCase();
-          const alreadyKnown = suppliers.some(s =>
-            s.keywords.some(kw => supplierLower.includes(kw)) ||
-            (s.nif && meta.nif && s.nif === meta.nif)
-          );
-          if (!alreadyKnown) {
-            await supabase.from('suppliers').upsert(
-              {
-                name: meta.supplier,
-                nif: meta.nif ?? null,
-                keywords: [supplierLower],
-                type: payload.doc_type === 'ecommerce' ? 'ecommerce'
-                    : payload.doc_type === 'bank_statement' ? 'bank'
-                    : payload.doc_type === 'supplies' ? 'supplies'
-                    : 'normal',
-                auto_detected: true,
-                active: true,
-              },
-              { onConflict: 'name', ignoreDuplicates: false }
+          // Detecção de duplicado: mesmo fornecedor + valor ±1€ + data no mesmo mês
+          let isDuplicateSuspect = false;
+          if (meta.supplier && meta.value && meta.doc_date) {
+            const [dy, dm] = meta.doc_date.split('-').map(Number);
+            const { data: similar } = await supabase
+              .from('processing_queue')
+              .select('id')
+              .eq('supplier', meta.supplier)
+              .gte('value', meta.value - 1)
+              .lte('value', meta.value + 1)
+              .gte('doc_date', `${dy}-${String(dm).padStart(2,'0')}-01`)
+              .lte('doc_date', `${dy}-${String(dm).padStart(2,'0')}-31`)
+              .neq('file_id', file.id)
+              .limit(1);
+            isDuplicateSuspect = (similar?.length ?? 0) > 0;
+          }
+
+          const payload = buildQueuePayload(file, currentInboxId, meta, suppliers, folderConfig, companyNif, source);
+
+          // Persiste fornecedor auto-detectado se não estiver na lista conhecida
+          if (meta.supplier && payload.doc_type !== 'unknown') {
+            const supplierLower = meta.supplier.toLowerCase();
+            const alreadyKnown = suppliers.some(s =>
+              s.keywords.some(kw => supplierLower.includes(kw)) ||
+              (s.nif && meta.nif && s.nif === meta.nif)
             );
+            if (!alreadyKnown) {
+              await supabase.from('suppliers').upsert(
+                {
+                  name: meta.supplier,
+                  nif: meta.nif ?? null,
+                  keywords: [supplierLower],
+                  type: payload.doc_type === 'ecommerce' ? 'ecommerce'
+                      : payload.doc_type === 'bank_statement' ? 'bank'
+                      : payload.doc_type === 'supplies' ? 'supplies'
+                      : 'normal',
+                  auto_detected: true,
+                  active: true,
+                },
+                { onConflict: 'name', ignoreDuplicates: false }
+              );
+            }
           }
-        }
 
-        // Insere ou actualiza na fila (update se era error, insert se novo)
-        if (existing?.status === 'error') {
-          await supabase.from('processing_queue')
-            .update({ ...payload, is_duplicate_suspect: isDuplicateSuspect, error_message: null })
-            .eq('id', existing.id)
-            .throwOnError();
-        } else {
-          await supabase.from('processing_queue')
-            .insert({ ...payload, is_duplicate_suspect: isDuplicateSuspect })
-            .throwOnError();
-        }
-
-        // Log de sucesso
-        await supabase.from('processing_logs').insert({
-          file_id: file.id,
-          file_name: file.name,
-          action: 'classify',
-          status: 'success',
-          metadata: { ...meta, doc_type: payload.doc_type, is_duplicate_suspect: isDuplicateSuspect },
-        });
-
-        // Extracção de transacções para extratos bancários
-        if (payload.doc_type === 'bank_statement') {
-          const insertedEntry = existing?.status === 'error'
-            ? existing
-            : (await supabase.from('processing_queue').select('id').eq('file_id', file.id).single()).data;
-          if (insertedEntry?.id) {
-            fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/extract-transactions`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-              },
-              body: JSON.stringify({ queue_id: insertedEntry.id }),
-            }).catch(() => { /* fire and forget */ });
+          // Insere ou actualiza na fila (update se era error, insert se novo)
+          if (existing?.status === 'error') {
+            await supabase.from('processing_queue')
+              .update({ ...payload, is_duplicate_suspect: isDuplicateSuspect, error_message: null })
+              .eq('id', existing.id)
+              .throwOnError();
+          } else {
+            await supabase.from('processing_queue')
+              .insert({ ...payload, is_duplicate_suspect: isDuplicateSuspect })
+              .throwOnError();
           }
+
+          // Log de sucesso
+          await supabase.from('processing_logs').insert({
+            file_id: file.id,
+            file_name: file.name,
+            action: 'classify',
+            status: 'success',
+            metadata: { ...meta, doc_type: payload.doc_type, is_duplicate_suspect: isDuplicateSuspect, source },
+          });
+
+          // Extracção de transacções para extratos bancários
+          if (payload.doc_type === 'bank_statement') {
+            const insertedEntry = existing?.status === 'error'
+              ? existing
+              : (await supabase.from('processing_queue').select('id').eq('file_id', file.id).single()).data;
+            if (insertedEntry?.id) {
+              fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/extract-transactions`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+                },
+                body: JSON.stringify({ queue_id: insertedEntry.id }),
+              }).catch(() => { /* fire and forget */ });
+            }
+          }
+
+          queued++;
+
+        } catch (err) {
+          // Log de erro + fila com status error
+          await supabase.from('processing_queue').upsert({
+            file_id: file.id,
+            file_name: file.name,
+            inbox_folder_id: currentInboxId,
+            source,
+            status: 'error',
+            error_message: err instanceof Error ? err.message : 'Erro desconhecido',
+          });
+
+          await supabase.from('processing_logs').insert({
+            file_id: file.id,
+            file_name: file.name,
+            action: 'error',
+            status: 'error',
+            error_message: err instanceof Error ? err.message : 'Erro desconhecido',
+          });
         }
-
-        queued++;
-
-      } catch (err) {
-        // Log de erro + fila com status error
-        await supabase.from('processing_queue').upsert({
-          file_id: file.id,
-          file_name: file.name,
-          inbox_folder_id: inboxFolderId,
-          status: 'error',
-          error_message: err instanceof Error ? err.message : 'Erro desconhecido',
-        });
-
-        await supabase.from('processing_logs').insert({
-          file_id: file.id,
-          file_name: file.name,
-          action: 'error',
-          status: 'error',
-          error_message: err instanceof Error ? err.message : 'Erro desconhecido',
-        });
       }
+    }
+
+    if (queued === 0) {
+      return new Response(
+        JSON.stringify({ queued: 0, message: 'Inboxes vazias' }),
+        { headers: { ...CORS, 'Content-Type': 'application/json' } }
+      );
     }
 
     // --------------------------------------------------------

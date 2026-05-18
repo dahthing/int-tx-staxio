@@ -1,0 +1,206 @@
+<div class="archive-list" [class.archive-list--split]="selectedId()">
+  <div class="archive-list__panel">
+    <header class="archive-list__header">
+      <h1 class="archive-list__title">Arquivo</h1>
+      <span class="archive-list__count">
+        {{ filteredEntries().length }} de {{ entries().length }}
+      </span>
+    </header>
+
+    <div class="archive-list__filters">
+      <input
+        class="archive-list__filter-input"
+        type="text"
+        placeholder="Fornecedor…"
+        [ngModel]="filterSupplier()"
+        (ngModelChange)="setSupplierFilter($event)"
+        aria-label="Filtrar por fornecedor"
+      />
+      <select
+        class="archive-list__filter-input archive-list__filter-select"
+        [ngModel]="filterYear()"
+        (ngModelChange)="setYearFilter($event)"
+        aria-label="Filtrar por ano"
+      >
+        <option value="">Todos os anos</option>
+        @for (y of availableYears(); track y) {
+          <option [value]="y">{{ y }}</option>
+        }
+      </select>
+      <input
+        class="archive-list__filter-input"
+        type="month"
+        [ngModel]="filterMonth()"
+        (ngModelChange)="setMonthFilter($event)"
+        aria-label="Filtrar por mês"
+      />
+      <select
+        class="archive-list__filter-input archive-list__filter-select"
+        [ngModel]="filterDocType()"
+        (ngModelChange)="setDocTypeFilter($event)"
+        aria-label="Filtrar por tipo"
+      >
+        <option value="">Todos os tipos</option>
+        <option value="received">Recebida</option>
+        <option value="issued">Emitida</option>
+        <option value="invoice_issued">Fatura emitida</option>
+        <option value="receipt_issued">Recibo emitido</option>
+        <option value="quote_issued">Orçamento emitido</option>
+        <option value="ecommerce">E-commerce</option>
+        <option value="bank_statement">Extrato bancário</option>
+        <option value="supplies">Compras</option>
+        <option value="international">Internacional</option>
+        <option value="unknown">Desconhecido</option>
+      </select>
+      @if (filterSupplier() || filterMonth() || filterDocType() || filterYear()) {
+        <button class="archive-list__filter-clear" type="button" (click)="clearFilters()" aria-label="Limpar filtros">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
+
+    @if (loading()) {
+      <ul class="archive-list__items" aria-busy="true" aria-label="A carregar documentos">
+        @for (_ of [1, 2, 3]; track $index) {
+          <li class="archive-list__skeleton" aria-hidden="true"></li>
+        }
+      </ul>
+    } @else if (filteredEntries().length === 0) {
+      <div class="archive-list__empty" role="status">
+        <mat-icon class="archive-list__empty-icon">archive</mat-icon>
+        <p>Nenhum documento no arquivo.</p>
+      </div>
+    } @else {
+      <ul class="archive-list__items" role="list">
+        @for (entry of filteredEntries(); track entry.id) {
+          <li
+            class="archive-list__item"
+            [class.archive-list__item--selected]="selectedId() === entry.id"
+          >
+            <button
+              class="archive-list__row"
+              type="button"
+              (click)="onSelectEntry(entry)"
+              [attr.aria-expanded]="selectedId() === entry.id"
+              [attr.aria-label]="'Ver ' + entry.file_name"
+            >
+              <span class="archive-list__col archive-list__col--name" [title]="entry.file_name">
+                {{ entry.file_name }}
+              </span>
+              <span class="archive-list__col archive-list__col--supplier">
+                {{ entry.supplier ?? '—' }}
+              </span>
+              <span class="archive-list__col archive-list__col--date">
+                {{ entry.doc_date ? (entry.doc_date | date:'dd/MM/yyyy') : '—' }}
+              </span>
+              <span class="archive-list__col archive-list__col--meta" aria-hidden="true">
+                <span>{{ entry.supplier ?? '—' }}</span>
+                <span>·</span>
+                <span>{{ entry.doc_date ? (entry.doc_date | date:'dd/MM/yyyy') : '—' }}</span>
+              </span>
+              <span class="archive-list__col archive-list__col--value">
+                @if (entry.value !== null) {
+                  {{ entry.value | number:'1.2-2' }} {{ entry.currency }}
+                } @else {
+                  —
+                }
+              </span>
+              <span class="archive-list__col archive-list__col--atcud" [title]="entry.atcud ?? ''">
+                @if (entry.atcud) {
+                  <span class="archive-list__atcud-badge" aria-label="ATCUD">{{ entry.atcud }}</span>
+                } @else {
+                  <span class="archive-list__atcud-none" aria-label="Sem ATCUD">—</span>
+                }
+              </span>
+              <span class="archive-list__col archive-list__col--path" [title]="entry.dest_path ?? ''">
+                {{ entry.dest_path ?? '—' }}
+              </span>
+              <span class="archive-list__badge" aria-label="Estado: arquivo">arquivo</span>
+            </button>
+
+            @if (isMobile() && selectedId() === entry.id) {
+              <div class="archive-list__mobile-preview">
+                @if (driveViewerUrl()) {
+                  <a
+                    class="archive-list__drive-link"
+                    [href]="driveViewerUrl()!"
+                    target="_blank"
+                    rel="noopener"
+                    aria-label="Abrir no Google Drive"
+                  >
+                    <mat-icon>open_in_new</mat-icon>
+                    Abrir no Drive
+                  </a>
+                  <iframe
+                    class="archive-list__preview-frame"
+                    [src]="previewUrl()!"
+                    title="Pré-visualização do documento"
+                    allow="autoplay"
+                    sandbox="allow-scripts allow-same-origin allow-popups"
+                  ></iframe>
+                } @else {
+                  <div class="archive-list__preview-unavailable">
+                    <mat-icon>description</mat-icon>
+                    <span>Pré-visualização indisponível</span>
+                  </div>
+                }
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </div>
+
+  @if (!isMobile() && selectedId()) {
+    <div class="archive-list__preview-panel">
+      <div class="archive-list__preview-header">
+        <span class="archive-list__preview-title" [title]="selectedEntry()?.file_name ?? ''">
+          {{ selectedEntry()?.file_name ?? '' }}
+        </span>
+        <div class="archive-list__preview-header-actions">
+          @if (selectedEntry()?.atcud) {
+            <span class="archive-list__preview-atcud" aria-label="ATCUD">
+              ATCUD: {{ selectedEntry()!.atcud }}
+            </span>
+          }
+          @if (driveViewerUrl()) {
+            <a
+              mat-icon-button
+              [href]="driveViewerUrl()!"
+              target="_blank"
+              rel="noopener"
+              matTooltip="Abrir no Google Drive"
+              aria-label="Abrir no Google Drive"
+            >
+              <mat-icon>open_in_new</mat-icon>
+            </a>
+          }
+          <button
+            mat-icon-button
+            (click)="onSelectEntry(selectedEntry()!)"
+            matTooltip="Fechar pré-visualização"
+            aria-label="Fechar pré-visualização"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      @if (previewUrl()) {
+        <iframe
+          class="archive-list__preview-frame"
+          [src]="previewUrl()!"
+          title="Pré-visualização do documento"
+          allow="autoplay"
+          sandbox="allow-scripts allow-same-origin allow-popups"
+        ></iframe>
+      } @else {
+        <div class="archive-list__preview-unavailable">
+          <mat-icon>description</mat-icon>
+          <span>Pré-visualização indisponível</span>
+        </div>
+      }
+    </div>
+  }
+</div>

@@ -155,11 +155,13 @@ export function classifyDocument(input: ClassifyInput): DocType {
 // ============================================================
 export function buildDestPath(
   input: DestPathInput,
-  folderConfig: FolderConfig[]
+  folderConfig: FolderConfig[],
+  rootMode: 'current' | 'archive' = 'current',
 ): { path: string; rootFolderId: string | null; needsCreate: boolean } {
   const { docType, year, month, quarter } = input;
   const monthLabel = resolveMonthPT(month);
 
+  const rootKey = rootMode === 'archive' ? 'archive_root' : 'root';
   const getFolder = (key: string) => folderConfig.find(f => f.key === key);
 
   switch (docType) {
@@ -167,63 +169,63 @@ export function buildDestPath(
     case 'invoice_issued':
       return {
         path: `${year}/Faturas Vendas/${monthLabel}`,
-        rootFolderId: getFolder('root')?.folder_id ?? null,
+        rootFolderId: getFolder(rootKey)?.folder_id ?? null,
         needsCreate: true
       };
 
     case 'receipt_issued':
       return {
         path: `${year}/Recibos Emitidos/${monthLabel}`,
-        rootFolderId: getFolder('root')?.folder_id ?? null,
+        rootFolderId: getFolder(rootKey)?.folder_id ?? null,
         needsCreate: true
       };
 
     case 'quote_issued':
       return {
         path: `${year}/Orçamentos/${monthLabel}`,
-        rootFolderId: getFolder('root')?.folder_id ?? null,
+        rootFolderId: getFolder(rootKey)?.folder_id ?? null,
         needsCreate: true
       };
 
     case 'bank_statement':
       return {
         path: `${year}/Extratos Bancarios`,
-        rootFolderId: getFolder('root')?.folder_id ?? null,
+        rootFolderId: getFolder(rootKey)?.folder_id ?? null,
         needsCreate: true
       };
 
     case 'supplies':
       return {
         path: `${year}/Compras & Materias Primas`,
-        rootFolderId: getFolder('root')?.folder_id ?? null,
+        rootFolderId: getFolder(rootKey)?.folder_id ?? null,
         needsCreate: true
       };
 
     case 'international':
       return {
         path: `${year}/Internacional/${monthLabel}`,
-        rootFolderId: getFolder('root')?.folder_id ?? null,
+        rootFolderId: getFolder(rootKey)?.folder_id ?? null,
         needsCreate: true
       };
 
     case 'ecommerce':
       return {
         path: `${year}/Faturas e Talões ${quarter}T/eCommerce`,
-        rootFolderId: getFolder('root')?.folder_id ?? null,
+        rootFolderId: getFolder(rootKey)?.folder_id ?? null,
         needsCreate: true
       };
 
     case 'received':
       return {
         path: `${year}/Faturas e Talões ${quarter}T/${monthLabel}`,
-        rootFolderId: getFolder('root')?.folder_id ?? null,
+        rootFolderId: getFolder(rootKey)?.folder_id ?? null,
         needsCreate: true
       };
 
     default: // unknown
       return {
         path: `_aguardar_validacao`,
-        rootFolderId: getFolder('root')?.folder_id ?? null,
+        rootFolderId: getFolder(rootKey)?.folder_id ?? null,
         needsCreate: true
       };
   }
@@ -302,6 +304,14 @@ export function buildDestFileName(input: DestFileNameInput): string {
 // ============================================================
 // QUEUE PAYLOAD — monta o objecto a inserir na processing_queue
 // ============================================================
+const ATCUD_REGEX = /^[A-Z0-9]{8,}-\d+$/;
+
+export function parseAtcud(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim().toUpperCase();
+  return ATCUD_REGEX.test(trimmed) ? trimmed : null;
+}
+
 export interface ClaudeMeta {
   doc_date: string | null;
   supplier: string | null;
@@ -311,6 +321,7 @@ export interface ClaudeMeta {
   country: string | null;
   currency: string | null;
   confidence: number;
+  atcud?: string | null;
   is_my_doc?: boolean;
   my_doc_kind?: string | null;
   vat_amount?: number | null;
@@ -321,6 +332,8 @@ export interface QueuePayload {
   file_id: string;
   file_name: string;
   inbox_folder_id: string;
+  source: 'current' | 'archive';
+  atcud: string | null;
   status: 'pending' | 'manual_review';
   doc_type: DocType;
   doc_date: string | null;
@@ -358,6 +371,7 @@ export function buildQueuePayload(
   suppliers: Supplier[],
   folderConfig: FolderConfig[],
   companyNif: string,
+  source: 'current' | 'archive' = 'current',
 ): QueuePayload {
   const nif = meta.nif ?? extractNif(meta.supplier ?? '');
 
@@ -390,6 +404,7 @@ export function buildQueuePayload(
   const { path: destPath, rootFolderId } = buildDestPath(
     { docType, year, month, quarter },
     folderConfig,
+    source,
   );
 
   const ext = file.name.split('.').pop() ?? 'pdf';
@@ -404,6 +419,8 @@ export function buildQueuePayload(
     file_id: file.id,
     file_name: file.name,
     inbox_folder_id: inboxFolderId,
+    source,
+    atcud: parseAtcud(meta.atcud),
     status: docType === 'unknown' ? 'manual_review' : 'pending',
     doc_type: docType,
     doc_date: meta.doc_date,

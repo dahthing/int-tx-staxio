@@ -89,6 +89,8 @@ export class Settings implements OnInit {
   readonly form = this.#fb.nonNullable.group({
     drive_inbox_folder_id:          ['', Validators.required],
     drive_root_folder_id:           ['', Validators.required],
+    drive_inbox_archive_folder_id:  ['' as string],
+    drive_archive_root_folder_id:   ['' as string],
     drive_internacional_folder_id:  ['', Validators.required],
     drive_faturas_vendas_folder_id: ['', Validators.required],
     drive_extratos_folder_id:       ['', Validators.required],
@@ -109,11 +111,22 @@ export class Settings implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
+    // Carrega folder_config do arquivo (inbox_archive, archive_root) em paralelo com app_config
+    const archiveConfigPromise = this.#supabase
+      .from('folder_config')
+      .select('key, folder_id')
+      .in('key', ['inbox_archive', 'archive_root']);
+
     this.#http.get<AppConfig>(this.#configUrl).subscribe({
-      next: cfg => {
+      next: async cfg => {
+        const { data: archiveFolders } = await archiveConfigPromise;
+        const archiveMap = Object.fromEntries((archiveFolders ?? []).map(r => [r.key, r.folder_id ?? '']));
+
         this.form.setValue({
           drive_inbox_folder_id:          cfg.drive_inbox_folder_id ?? '',
           drive_root_folder_id:           cfg.drive_root_folder_id ?? '',
+          drive_inbox_archive_folder_id:  archiveMap['inbox_archive'] ?? '',
+          drive_archive_root_folder_id:   archiveMap['archive_root'] ?? '',
           drive_internacional_folder_id:  cfg.drive_internacional_folder_id ?? '',
           drive_faturas_vendas_folder_id: cfg.drive_faturas_vendas_folder_id ?? '1ZHYr7mXTFifFMO9FNRWo6dzqWw3iVv8d',
           drive_extratos_folder_id:       cfg.drive_extratos_folder_id ?? '1Bul9s71rvh0ijYjhKNRF9gMNJ2tFDMpN',
@@ -266,8 +279,17 @@ export class Settings implements OnInit {
       digest_enabled:                 String(raw.digest_enabled),
       ...(raw.digest_to_email ? { digest_to_email: raw.digest_to_email } : {}),
     };
+
+    // Guarda archive folder IDs directamente em folder_config (usados pelo classify)
+    const archiveUpserts = [
+      { key: 'inbox_archive', label: 'Inbox Archive Files', folder_id: raw.drive_inbox_archive_folder_id || null, folder_name: 'Inbox_Archive_Files', parent_key: null, auto_create: false, editable: true },
+      { key: 'archive_root',  label: 'Raiz Archive_Files',  folder_id: raw.drive_archive_root_folder_id  || null, folder_name: 'Archive_Files',        parent_key: null, auto_create: false, editable: true },
+    ];
+    const archiveSave = this.#supabase.from('folder_config').upsert(archiveUpserts, { onConflict: 'key' });
+
     this.#http.patch<{ updated: string[] }>(this.#configUrl, patch).subscribe({
-      next: () => {
+      next: async () => {
+        await archiveSave;
         this.#saving.set(false);
         this.#toast('Definições guardadas', 'success');
       },

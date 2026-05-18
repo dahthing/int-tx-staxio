@@ -31,4 +31,6 @@ export interface QueueEntry {
   is_duplicate_suspect: boolean | null;
   is_paid: boolean | null;
   payment_date: string | null;
+  source: 'current' | 'archive' | null;
+  atcud: string | null;
 }
