@@ -258,6 +258,23 @@ export class ManualReview implements OnInit {
     });
   }
 
+  async onReprocess(entry: QueueEntry): Promise<void> {
+    if (!confirm(`Reprocessar "${entry.file_name}"? O documento será reclassificado e movido automaticamente.`)) return;
+    this.#actionBusy.set(true);
+    this.#queue.reprocess(entry.id).subscribe({
+      next: r => {
+        this.#actionBusy.set(false);
+        this.#expandedId.set(null);
+        void this.#queue.loadAll();
+        this.#toast(`Reprocessado → ${r.doc_type} / ${r.dest_path}`, 'success');
+      },
+      error: (err: Error) => {
+        this.#actionBusy.set(false);
+        this.#toast(err.message ?? 'Erro ao reprocessar', 'error');
+      },
+    });
+  }
+
   async onDelete(entry: QueueEntry): Promise<void> {
     if (!confirm(`Apagar "${entry.file_name}" da fila? O ficheiro continua no Drive e pode ser reimportado.`)) return;
     this.#actionBusy.set(true);

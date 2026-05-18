@@ -92,6 +92,13 @@ export class QueueService implements OnDestroy {
     );
   }
 
+  reprocess(queueId: string) {
+    return this.#http.post<{ reprocessed: number; doc_type: string; dest_path: string }>(
+      `${environment.edgeFunctionsUrl}/classify`,
+      { queue_id: queueId }
+    );
+  }
+
   triggerMove(queueId?: string) {
     return this.#http.post<{ moved: number; errors: unknown[] }>(
       `${environment.edgeFunctionsUrl}/move`,

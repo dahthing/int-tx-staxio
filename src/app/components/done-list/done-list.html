@@ -141,6 +141,16 @@
               <button
                 mat-icon-button
                 class="done-list__action"
+                [disabled]="reprocessingId() === entry.id"
+                (click)="onReprocess(entry); $event.stopPropagation()"
+                matTooltip="Reprocessar documento"
+                aria-label="Reclassificar e mover documento"
+              >
+                <mat-icon>autorenew</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                class="done-list__action"
                 [disabled]="movingId() === entry.id"
                 (click)="onMoveFolder(entry); $event.stopPropagation()"
                 matTooltip="Mudar pasta"

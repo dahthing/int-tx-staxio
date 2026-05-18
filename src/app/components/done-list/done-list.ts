@@ -17,6 +17,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { SUPABASE_CLIENT } from '../../core/supabase.client';
 import { QueueEntry } from '../../models/queue-entry.model';
+import { QueueService } from '../../services/queue.service';
 import { environment } from '../../../environments/environment';
 import { DriveFolderPicker } from '../drive-folder-picker/drive-folder-picker';
 
@@ -39,6 +40,9 @@ import { DriveFolderPicker } from '../drive-folder-picker/drive-folder-picker';
 export class DoneList implements OnInit {
   readonly #supabase = inject(SUPABASE_CLIENT);
   readonly #http = inject(HttpClient);
+  readonly #queue = inject(QueueService);
+  readonly #reprocessingId = signal<string | null>(null);
+  readonly reprocessingId = this.#reprocessingId.asReadonly();
   readonly #snackBar = inject(MatSnackBar);
   readonly #sanitizer = inject(DomSanitizer);
   readonly #layout = inject(LayoutService);
@@ -186,6 +190,22 @@ export class DoneList implements OnInit {
           this.#toast(err.message ?? 'Erro ao mover ficheiro', 'error');
         },
       });
+  }
+
+  onReprocess(entry: QueueEntry): void {
+    if (!confirm(`Reprocessar "${entry.file_name}"? O documento será reclassificado e movido automaticamente.`)) return;
+    this.#reprocessingId.set(entry.id);
+    this.#queue.reprocess(entry.id).subscribe({
+      next: r => {
+        this.#reprocessingId.set(null);
+        this.#toast(`Reprocessado → ${r.doc_type} / ${r.dest_path}`, 'success');
+        void this.#loadDone();
+      },
+      error: (err: Error) => {
+        this.#reprocessingId.set(null);
+        this.#toast(err.message ?? 'Erro ao reprocessar', 'error');
+      },
+    });
   }
 
   async #loadDone(): Promise<void> {

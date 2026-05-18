@@ -22,6 +22,7 @@ import { z, validate, validationError } from '../_shared/validate.ts';
 // Schema de validação do body
 const ClassifyBodySchema = z.object({
   file_id: z.string().uuid('file_id deve ser um UUID válido').optional(),
+  queue_id: z.string().uuid('queue_id deve ser um UUID válido').optional(),
 }).strict();
 
 // ============================================================
@@ -260,7 +261,9 @@ Deno.serve(async (req) => {
     const validation = validate(ClassifyBodySchema, rawBody);
     if (!validation.ok) return validationError(validation.error, CORS);
 
-    const specificFileId: string | null = validation.data.file_id ?? null;
+    const body = validation.data as { file_id?: string; queue_id?: string };
+    const specificFileId: string | null = body.file_id ?? null;
+    const reprocessQueueId: string | null = body.queue_id ?? null;
 
     const inboxFolderId = Deno.env.get('DRIVE_INBOX_FOLDER_ID')!;
     const companyNif = Deno.env.get('COMPANY_NIF') ?? '514084235';
@@ -274,6 +277,145 @@ Deno.serve(async (req) => {
 
     const suppliers: Supplier[] = suppliersData ?? [];
     const folderConfig: FolderConfig[] = folderConfigData ?? [];
+
+    // ---- Modo reprocessamento (queue_id) ----
+    if (reprocessQueueId) {
+      const { data: queueRow, error: queueErr } = await supabase
+        .from('processing_queue')
+        .select('*')
+        .eq('id', reprocessQueueId)
+        .single();
+
+      if (queueErr || !queueRow) {
+        return new Response(
+          JSON.stringify({ error: 'Registo não encontrado' }),
+          { status: 404, headers: { ...CORS, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const prevDocType = queueRow.doc_type;
+      const prevDestPath = queueRow.dest_path;
+      const source: 'current' | 'archive' = queueRow.source === 'archive' ? 'archive' : 'current';
+
+      // Resolve pasta actual do ficheiro no Drive
+      const currentParent = await getDriveFileParent(driveToken, queueRow.file_id);
+
+      // Corre pipeline de extracção
+      const pdfBytes = await (async () => {
+        const res = await fetch(
+          `https://www.googleapis.com/drive/v3/files/${queueRow.file_id}?alt=media&supportsAllDrives=true`,
+          { headers: { Authorization: `Bearer ${driveToken}` } }
+        );
+        return new Uint8Array(await res.arrayBuffer());
+      })();
+
+      let classifyTier: 'qr_text' | 'qr_image' | 'claude' = 'claude';
+      let qrSupplierName: string | null = null;
+      let partialMeta = null as typeof partialMeta;
+      const bytes2 = pdfBytes;
+      let binary2 = '';
+      for (let i = 0; i < bytes2.length; i += 8192) {
+        binary2 += String.fromCharCode(...bytes2.subarray(i, i + 8192));
+      }
+      const pdfBase64 = btoa(binary2);
+
+      const qrText1 = await extractQrTextFromPdf(pdfBytes);
+      if (qrText1) {
+        const parsed = parseAtQrString(qrText1);
+        if (parsed && isQrMetaSufficient(parsed.partial)) {
+          classifyTier = 'qr_text';
+          partialMeta = { ...parsed.partial, issuerNif: parsed.issuerNifFromQr || null };
+          if (parsed.issuerNifFromQr) {
+            const found = suppliers.find(s => s.nif === parsed.issuerNifFromQr);
+            qrSupplierName = found?.name ?? null;
+          }
+        }
+      }
+
+      if (!partialMeta) {
+        const qrText2 = await extractQrTextFromThumbnail(queueRow.file_id, driveToken);
+        if (qrText2) {
+          const parsed = parseAtQrString(qrText2);
+          if (parsed && isQrMetaSufficient(parsed.partial)) {
+            classifyTier = 'qr_image';
+            partialMeta = { ...parsed.partial, issuerNif: parsed.issuerNifFromQr || null };
+            if (parsed.issuerNifFromQr) {
+              const found = suppliers.find(s => s.nif === parsed.issuerNifFromQr);
+              qrSupplierName = found?.name ?? null;
+            }
+          }
+        }
+      }
+
+      let rawReprocessMeta: Record<string, unknown>;
+      if (partialMeta) {
+        rawReprocessMeta = { ...partialMeta, supplier: qrSupplierName, is_my_doc: false, my_doc_kind: null, vat_amount: null, vat_rate: null };
+      } else {
+        classifyTier = 'claude';
+        rawReprocessMeta = await extractMetadata(anthropic, pdfBase64, supabase);
+      }
+
+      const reprocessMeta = {
+        doc_date: (rawReprocessMeta.doc_date as string) ?? null,
+        supplier: (rawReprocessMeta.supplier as string) ?? null,
+        issuerNif: (rawReprocessMeta.issuerNif as string) ?? null,
+        value: (rawReprocessMeta.value as number) ?? null,
+        nif: (rawReprocessMeta.nif as string) ?? null,
+        country: (rawReprocessMeta.country as string) ?? null,
+        currency: (rawReprocessMeta.currency as string) ?? 'EUR',
+        atcud: (rawReprocessMeta.atcud as string) ?? null,
+        confidence: typeof rawReprocessMeta.confidence === 'number' ? rawReprocessMeta.confidence as number : 0.8,
+        is_my_doc: rawReprocessMeta.is_my_doc === true,
+        my_doc_kind: (rawReprocessMeta.my_doc_kind as string) ?? null,
+        vat_amount: typeof rawReprocessMeta.vat_amount === 'number' ? rawReprocessMeta.vat_amount as number : null,
+        vat_rate: typeof rawReprocessMeta.vat_rate === 'number' ? rawReprocessMeta.vat_rate as number : null,
+      };
+
+      const newPayload = buildQueuePayload(
+        { id: queueRow.file_id, name: queueRow.file_name },
+        currentParent,
+        reprocessMeta, suppliers, folderConfig, companyNif, source,
+      );
+
+      await supabase.from('processing_queue').update({
+        ...newPayload,
+        status: 'pending',
+        inbox_folder_id: currentParent,
+        error_message: null,
+      }).eq('id', reprocessQueueId);
+
+      await supabase.from('processing_logs').insert({
+        queue_id: reprocessQueueId,
+        file_id: queueRow.file_id,
+        file_name: queueRow.file_name,
+        action: 'reprocess',
+        status: 'success',
+        metadata: {
+          classify_tier: classifyTier,
+          previous_doc_type: prevDocType,
+          previous_dest_path: prevDestPath,
+          new_doc_type: newPayload.doc_type,
+          new_dest_path: newPayload.dest_path,
+        },
+      });
+
+      // Auto-move
+      const moveUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/move`;
+      const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+      await Promise.race([
+        fetch(moveUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${serviceKey}` },
+          body: JSON.stringify({ queue_id: reprocessQueueId }),
+        }).catch(() => {}),
+        new Promise(resolve => setTimeout(resolve, 8_000)),
+      ]);
+
+      return new Response(
+        JSON.stringify({ reprocessed: 1, doc_type: newPayload.doc_type, dest_path: newPayload.dest_path }),
+        { headers: { ...CORS, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Inboxes a processar: corrente + arquivo (se configurado)
     type InboxEntry = { folderId: string; source: 'current' | 'archive' };

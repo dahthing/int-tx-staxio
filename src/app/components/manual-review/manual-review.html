@@ -184,6 +184,12 @@
                         <mat-icon>do_not_disturb</mat-icon>
                         Ignorar
                       </button>
+                      <button type="button" class="btn btn--ghost btn--sm"
+                        (click)="onReprocess(entry)" [disabled]="actionBusy()"
+                        aria-label="Reclassificar com IA">
+                        <mat-icon>autorenew</mat-icon>
+                        Reprocessar
+                      </button>
                       <button type="submit" class="btn btn--primary btn--sm"
                         [disabled]="actionBusy() || form.invalid" [attr.aria-busy]="actionBusy()">
                         <mat-icon>check</mat-icon>
@@ -304,6 +310,12 @@
                         aria-label="Ignorar este documento">
                         <mat-icon>do_not_disturb</mat-icon>
                         Ignorar
+                      </button>
+                      <button type="button" class="btn btn--ghost btn--sm"
+                        (click)="onReprocess(entry)" [disabled]="actionBusy()"
+                        aria-label="Reclassificar com IA">
+                        <mat-icon>autorenew</mat-icon>
+                        Reprocessar
                       </button>
                       <button type="submit" class="btn btn--primary btn--sm"
                         [disabled]="actionBusy() || form.invalid" [attr.aria-busy]="actionBusy()">
