@@ -221,8 +221,26 @@ Deno.serve(async (req) => {
     // Inboxes a processar: corrente + arquivo (se configurado)
     type InboxEntry = { folderId: string; source: 'current' | 'archive' };
     const archiveFolderId = folderConfig.find(f => f.key === 'inbox_archive')?.folder_id ?? null;
+
+    // Quando um file_id específico é pedido, determinar a que inbox pertence
+    // para garantir que source='archive' se o ficheiro veio de inbox_archive.
+    const resolveSourceForFile = async (fileId: string): Promise<InboxEntry> => {
+      if (archiveFolderId) {
+        const q = encodeURIComponent(`'${archiveFolderId}' in parents and trashed=false`);
+        const res = await fetch(
+          `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)&supportsAllDrives=true&includeItemsFromAllDrives=true`,
+          { headers: { Authorization: `Bearer ${driveToken}` } }
+        );
+        const { files: archiveFiles } = await res.json();
+        if ((archiveFiles ?? []).some((f: { id: string }) => f.id === fileId)) {
+          return { folderId: archiveFolderId, source: 'archive' };
+        }
+      }
+      return { folderId: inboxFolderId, source: 'current' };
+    };
+
     const inboxesToProcess: InboxEntry[] = specificFileId
-      ? [{ folderId: inboxFolderId, source: 'current' }]
+      ? [await resolveSourceForFile(specificFileId)]
       : [
           { folderId: inboxFolderId, source: 'current' },
           ...(archiveFolderId ? [{ folderId: archiveFolderId, source: 'archive' as const }] : []),
