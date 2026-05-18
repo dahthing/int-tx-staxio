@@ -1,3 +1,11 @@
+@if (pickerEntry()) {
+  <app-drive-folder-picker
+    [rootFolderId]="rootFolderId()"
+    (selected)="onFolderSelected($event)"
+    (cancelled)="onPickerCancelled()"
+  />
+}
+
 <div class="archive-list" [class.archive-list--split]="selectedId()">
   <div class="archive-list__panel">
     <header class="archive-list__header">
@@ -117,6 +125,29 @@
               </span>
               <span class="archive-list__badge" aria-label="Estado: arquivo">arquivo</span>
             </button>
+
+            <div class="archive-list__item-actions">
+              <button
+                mat-icon-button
+                class="archive-list__action"
+                [disabled]="reprocessingId() === entry.id"
+                (click)="onReprocess(entry); $event.stopPropagation()"
+                matTooltip="Reprocessar documento"
+                aria-label="Reclassificar e mover documento"
+              >
+                <mat-icon>autorenew</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                class="archive-list__action"
+                [disabled]="movingId() === entry.id"
+                (click)="onMoveFolder(entry); $event.stopPropagation()"
+                matTooltip="Mudar pasta"
+                aria-label="Mudar pasta do ficheiro"
+              >
+                <mat-icon>drive_file_move</mat-icon>
+              </button>
+            </div>
 
             @if (isMobile() && selectedId() === entry.id) {
               <div class="archive-list__mobile-preview">

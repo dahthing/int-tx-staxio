@@ -8,6 +8,9 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe, DecimalPipe } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
+import { DriveFolderPicker } from '../drive-folder-picker/drive-folder-picker';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,6 +19,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { LayoutService } from '../../services/layout.service';
 import { SUPABASE_CLIENT } from '../../core/supabase.client';
 import { QueueEntry } from '../../models/queue-entry.model';
+import { QueueService } from '../../services/queue.service';
 
 @Component({
   selector: 'app-archive-list',
@@ -27,6 +31,7 @@ import { QueueEntry } from '../../models/queue-entry.model';
     MatButtonModule,
     MatTooltipModule,
     MatSnackBarModule,
+    DriveFolderPicker,
   ],
   templateUrl: './archive-list.html',
   styleUrl: './archive-list.scss',
@@ -35,6 +40,16 @@ import { QueueEntry } from '../../models/queue-entry.model';
 export class ArchiveList implements OnInit {
   readonly #supabase = inject(SUPABASE_CLIENT);
   readonly #snackBar = inject(MatSnackBar);
+  readonly #http = inject(HttpClient);
+  readonly #queue = inject(QueueService);
+  readonly #reprocessingId = signal<string | null>(null);
+  readonly reprocessingId = this.#reprocessingId.asReadonly();
+  readonly #movingId = signal<string | null>(null);
+  readonly movingId = this.#movingId.asReadonly();
+  readonly #pickerEntry = signal<QueueEntry | null>(null);
+  readonly pickerEntry = this.#pickerEntry.asReadonly();
+  readonly #rootFolderId = signal('');
+  readonly rootFolderId = this.#rootFolderId.asReadonly();
   readonly #sanitizer = inject(DomSanitizer);
   readonly #layout = inject(LayoutService);
   readonly isMobile = this.#layout.isMobile;
@@ -108,6 +123,12 @@ export class ArchiveList implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    const { data } = await this.#supabase
+      .from('folder_config')
+      .select('folder_id')
+      .eq('key', 'archive_root')
+      .single();
+    if (data?.folder_id) this.#rootFolderId.set(data.folder_id);
     await this.#load();
   }
 
@@ -115,6 +136,54 @@ export class ArchiveList implements OnInit {
   setMonthFilter(v: string): void { this.#filterMonth.set(v); }
   setDocTypeFilter(v: string): void { this.#filterDocType.set(v); }
   setYearFilter(v: string): void { this.#filterYear.set(v); this.#filterMonth.set(''); }
+
+  onReprocess(entry: QueueEntry): void {
+    if (!confirm(`Reprocessar "${entry.file_name}"? O documento será reclassificado e movido dentro do arquivo.`)) return;
+    this.#reprocessingId.set(entry.id);
+    this.#queue.reprocess(entry.id).subscribe({
+      next: r => {
+        this.#reprocessingId.set(null);
+        this.#toast(`Reprocessado → ${r.doc_type} / ${r.dest_path}`, 'success');
+        void this.#load();
+      },
+      error: (err: Error) => {
+        this.#reprocessingId.set(null);
+        this.#toast(err.message ?? 'Erro ao reprocessar', 'error');
+      },
+    });
+  }
+
+  onMoveFolder(entry: QueueEntry): void {
+    this.#pickerEntry.set(entry);
+  }
+
+  onPickerCancelled(): void {
+    this.#pickerEntry.set(null);
+  }
+
+  onFolderSelected(selection: { id: string; path: string }): void {
+    const entry = this.#pickerEntry();
+    if (!entry) return;
+    this.#pickerEntry.set(null);
+    this.#movingId.set(entry.id);
+    this.#http
+      .post<{ moved: number }>(`${environment.edgeFunctionsUrl}/move-existing`, {
+        queue_id: entry.id,
+        new_folder_id: selection.id,
+        new_folder_path: selection.path,
+      })
+      .subscribe({
+        next: () => {
+          this.#movingId.set(null);
+          this.#toast('Ficheiro movido com sucesso', 'success');
+          void this.#load();
+        },
+        error: (err: Error) => {
+          this.#movingId.set(null);
+          this.#toast(err.message ?? 'Erro ao mover ficheiro', 'error');
+        },
+      });
+  }
 
   clearFilters(): void {
     this.#filterSupplier.set('');

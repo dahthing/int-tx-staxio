@@ -216,6 +216,20 @@
     }
   }
 
+  &__item-actions {
+    display: flex;
+    align-items: center;
+    padding: 0 0.25rem;
+    gap: 0;
+    border-left: 1px solid var(--stx-border);
+    flex-shrink: 0;
+  }
+
+  &__action {
+    color: var(--stx-text-muted);
+    &:hover { color: var(--stx-primary); }
+  }
+
   &__row {
     display: grid;
     grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr 2fr auto;

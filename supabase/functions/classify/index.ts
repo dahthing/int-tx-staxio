@@ -297,78 +297,40 @@ Deno.serve(async (req) => {
       const prevDestPath = queueRow.dest_path;
       const source: 'current' | 'archive' = queueRow.source === 'archive' ? 'archive' : 'current';
 
-      // Resolve pasta actual do ficheiro no Drive
+      // Resolve pasta actual do ficheiro no Drive (já foi movido do inbox)
       const currentParent = await getDriveFileParent(driveToken, queueRow.file_id);
 
-      // Corre pipeline de extracção
-      const pdfBytes = await (async () => {
-        const res = await fetch(
-          `https://www.googleapis.com/drive/v3/files/${queueRow.file_id}?alt=media&supportsAllDrives=true`,
-          { headers: { Authorization: `Bearer ${driveToken}` } }
-        );
-        return new Uint8Array(await res.arrayBuffer());
-      })();
+      // Download do PDF
+      const pdfRes = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${queueRow.file_id}?alt=media&supportsAllDrives=true`,
+        { headers: { Authorization: `Bearer ${driveToken}` } }
+      );
+      if (!pdfRes.ok) throw new Error(`Drive download falhou: ${pdfRes.status}`);
 
-      let classifyTier: 'qr_text' | 'qr_image' | 'claude' = 'claude';
-      let qrSupplierName: string | null = null;
-      let partialMeta = null as typeof partialMeta;
-      const bytes2 = pdfBytes;
+      const pdfBytes = new Uint8Array(await pdfRes.arrayBuffer());
       let binary2 = '';
-      for (let i = 0; i < bytes2.length; i += 8192) {
-        binary2 += String.fromCharCode(...bytes2.subarray(i, i + 8192));
+      for (let i = 0; i < pdfBytes.length; i += 8192) {
+        binary2 += String.fromCharCode(...pdfBytes.subarray(i, i + 8192));
       }
       const pdfBase64 = btoa(binary2);
 
-      const qrText1 = await extractQrTextFromPdf(pdfBytes);
-      if (qrText1) {
-        const parsed = parseAtQrString(qrText1);
-        if (parsed && isQrMetaSufficient(parsed.partial)) {
-          classifyTier = 'qr_text';
-          partialMeta = { ...parsed.partial, issuerNif: parsed.issuerNifFromQr || null };
-          if (parsed.issuerNifFromQr) {
-            const found = suppliers.find(s => s.nif === parsed.issuerNifFromQr);
-            qrSupplierName = found?.name ?? null;
-          }
-        }
-      }
+      // Reprocesso usa sempre Claude Vision para máxima fiabilidade
+      const rawReprocessMeta = await extractMetadata(anthropic, pdfBase64, supabase);
 
-      if (!partialMeta) {
-        const qrText2 = await extractQrTextFromThumbnail(queueRow.file_id, driveToken);
-        if (qrText2) {
-          const parsed = parseAtQrString(qrText2);
-          if (parsed && isQrMetaSufficient(parsed.partial)) {
-            classifyTier = 'qr_image';
-            partialMeta = { ...parsed.partial, issuerNif: parsed.issuerNifFromQr || null };
-            if (parsed.issuerNifFromQr) {
-              const found = suppliers.find(s => s.nif === parsed.issuerNifFromQr);
-              qrSupplierName = found?.name ?? null;
-            }
-          }
-        }
-      }
-
-      let rawReprocessMeta: Record<string, unknown>;
-      if (partialMeta) {
-        rawReprocessMeta = { ...partialMeta, supplier: qrSupplierName, is_my_doc: false, my_doc_kind: null, vat_amount: null, vat_rate: null };
-      } else {
-        classifyTier = 'claude';
-        rawReprocessMeta = await extractMetadata(anthropic, pdfBase64, supabase);
-      }
-
-      const reprocessMeta = {
-        doc_date: (rawReprocessMeta.doc_date as string) ?? null,
-        supplier: (rawReprocessMeta.supplier as string) ?? null,
-        issuerNif: (rawReprocessMeta.issuerNif as string) ?? null,
-        value: (rawReprocessMeta.value as number) ?? null,
-        nif: (rawReprocessMeta.nif as string) ?? null,
-        country: (rawReprocessMeta.country as string) ?? null,
-        currency: (rawReprocessMeta.currency as string) ?? 'EUR',
-        atcud: (rawReprocessMeta.atcud as string) ?? null,
-        confidence: typeof rawReprocessMeta.confidence === 'number' ? rawReprocessMeta.confidence as number : 0.8,
+      const reprocessMeta: ClaudeMeta = {
+        doc_date: rawReprocessMeta.doc_date ?? null,
+        supplier: rawReprocessMeta.supplier ?? null,
+        issuerNif: rawReprocessMeta.issuerNif ?? null,
+        value: rawReprocessMeta.value ?? null,
+        nif: rawReprocessMeta.nif ?? null,
+        country: rawReprocessMeta.country ?? null,
+        currency: rawReprocessMeta.currency ?? 'EUR',
+        atcud: rawReprocessMeta.atcud ?? null,
+        confidence: typeof rawReprocessMeta.confidence === 'number' ? rawReprocessMeta.confidence : 0.8,
         is_my_doc: rawReprocessMeta.is_my_doc === true,
-        my_doc_kind: (rawReprocessMeta.my_doc_kind as string) ?? null,
-        vat_amount: typeof rawReprocessMeta.vat_amount === 'number' ? rawReprocessMeta.vat_amount as number : null,
-        vat_rate: typeof rawReprocessMeta.vat_rate === 'number' ? rawReprocessMeta.vat_rate as number : null,
+        my_doc_kind: rawReprocessMeta.my_doc_kind ?? null,
+        vat_amount: typeof rawReprocessMeta.vat_amount === 'number' ? rawReprocessMeta.vat_amount : null,
+        vat_rate: typeof rawReprocessMeta.vat_rate === 'number' ? rawReprocessMeta.vat_rate : null,
       };
 
       const newPayload = buildQueuePayload(
@@ -391,11 +353,11 @@ Deno.serve(async (req) => {
         action: 'reprocess',
         status: 'success',
         metadata: {
-          classify_tier: classifyTier,
           previous_doc_type: prevDocType,
           previous_dest_path: prevDestPath,
           new_doc_type: newPayload.doc_type,
           new_dest_path: newPayload.dest_path,
+          atcud: reprocessMeta.atcud,
         },
       });
 

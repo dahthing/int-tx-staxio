@@ -14,6 +14,7 @@ export class InboxList {
   readonly move = output<string>();
   readonly statusChange = output<{ id: string; status: ProcessingStatus }>();
   readonly edit = output<QueueEntry>();
+  readonly reprocess = output<string>();
 
   readonly statusLabel: Record<ProcessingStatus, string> = {
     pending: 'Pendente',

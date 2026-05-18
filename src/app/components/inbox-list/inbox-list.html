@@ -72,6 +72,11 @@
                   [attr.aria-label]="'Retentar ' + entry.file_name">
                   Retentar
                 </button>
+                <button class="btn btn--sm btn--ghost" type="button"
+                  (click)="$event.stopPropagation(); reprocess.emit(entry.id)"
+                  [attr.aria-label]="'Reprocessar ' + entry.file_name">
+                  Reprocessar
+                </button>
               }
             </td>
           </tr>
@@ -140,6 +145,11 @@
                 (click)="statusChange.emit({ id: entry.id, status: 'pending' })"
                 [attr.aria-label]="'Retentar ' + entry.file_name">
                 Retentar
+              </button>
+              <button class="btn btn--sm btn--ghost" type="button"
+                (click)="reprocess.emit(entry.id)"
+                [attr.aria-label]="'Reprocessar ' + entry.file_name">
+                Reprocessar
               </button>
             }
             <button class="btn btn--sm btn--ghost" type="button"

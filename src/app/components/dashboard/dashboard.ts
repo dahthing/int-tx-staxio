@@ -142,6 +142,21 @@ export class Dashboard implements AfterViewInit, OnDestroy {
     }
   }
 
+  onReprocess(queueId: string): void {
+    if (!confirm('Reprocessar este documento com IA?')) return;
+    this.#actionBusy.set(true);
+    this.#queue.reprocess(queueId).subscribe({
+      next: r => {
+        this.#actionBusy.set(false);
+        this.#toast(`Reprocessado → ${r.doc_type} / ${r.dest_path}`, 'success');
+      },
+      error: (err: Error) => {
+        this.#actionBusy.set(false);
+        this.#toast(err.message ?? 'Erro ao reprocessar', 'error');
+      },
+    });
+  }
+
   onEdit(entry: QueueEntry): void {
     this.#editingEntry.set(entry);
     this.#editDrawerOpen.set(true);
