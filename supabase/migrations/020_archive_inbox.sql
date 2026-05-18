@@ -11,3 +11,10 @@ VALUES
   ('inbox_archive', 'Inbox Archive Files', NULL, 'Inbox_Archive_Files', NULL, false, true),
   ('archive_root',  'Raiz Archive_Files',  NULL, 'Archive_Files',        NULL, false, true)
 ON CONFLICT (key) DO NOTHING;
+
+-- Política de escrita para utilizadores autenticados (necessário para Settings UI guardar IDs de pasta)
+CREATE POLICY "auth_update_folder_config" ON folder_config
+  FOR UPDATE
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
