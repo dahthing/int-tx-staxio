@@ -30,6 +30,9 @@
           >
             <td class="inbox-list__cell inbox-list__cell--name" [title]="entry.file_name">
               {{ entry.file_name }}
+              @if (entry.source === 'archive') {
+                <span class="archive-chip" aria-label="Documento do arquivo">arquivo</span>
+              }
               @if (entry.is_duplicate_suspect) {
                 <span class="duplicate-chip" aria-label="Suspeito de duplicado">⚠ duplicado</span>
               }
@@ -103,6 +106,9 @@
 
           <p class="inbox-list__card-name" [title]="entry.file_name">
             {{ entry.file_name }}
+            @if (entry.source === 'archive') {
+              <span class="archive-chip" aria-label="Documento do arquivo">arquivo</span>
+            }
             @if (entry.is_duplicate_suspect) {
               <span class="duplicate-chip" aria-label="Suspeito de duplicado">⚠ duplicado</span>
             }
